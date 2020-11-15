@@ -7,6 +7,8 @@ if not r then
     jit = nil
 end
 
+local string = require'string'
+
 local SIZEOF_NUMBER = string.pack and #string.pack('n', 0.0) or 8
 local maxinteger
 local mininteger
