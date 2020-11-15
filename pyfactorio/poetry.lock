@@ -7,6 +7,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "msgpack-python"
+version = "0.5.6"
+description = "MessagePack (de)serializer."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "numpy"
 version = "1.19.4"
 description = "NumPy is the fundamental package for array computing with Python."
@@ -25,11 +33,14 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "957961052c4b70fbcf6224f28eedae9ca0e8cd4e703f49123a5aedc9728392ef"
+content-hash = "12a32940dd81898b3f33d65f168802642c2312aaf404c122b94e86b4c1e232d4"
 
 [metadata.files]
 mcrcon = [
     {file = "mcrcon-0.6.0.tar.gz", hash = "sha256:62e5fe014ffd347e7f2e50d92997520607c609a8accf570dbde29b69d8e4ad03"},
+]
+msgpack-python = [
+    {file = "msgpack-python-0.5.6.tar.gz", hash = "sha256:378cc8a6d3545b532dfd149da715abae4fda2a3adb6d74e525d0d5e51f46909b"},
 ]
 numpy = [
     {file = "numpy-1.19.4-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:e9b30d4bd69498fc0c3fe9db5f62fffbb06b8eb9321f92cc970f2969be5e3949"},
