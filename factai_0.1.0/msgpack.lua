@@ -1,13 +1,13 @@
---
+
 -- lua-MessagePack : <https://fperrad.frama.io/lua-MessagePack/>
---
+
 
 local r, jit = pcall(require, 'jit')
 if not r then
     jit = nil
 end
 
-local string = require'string'
+-- local string = require'string'
 
 local SIZEOF_NUMBER = string.pack and #string.pack('n', 0.0) or 8
 local maxinteger
@@ -27,14 +27,14 @@ local pcall = pcall
 local setmetatable = setmetatable
 local tostring = tostring
 local type = type
-local char = require'string'.char
-local format = require'string'.format
-local floor = require'math'.floor
-local tointeger = require'math'.tointeger or floor
-local frexp = require'math'.frexp or require'mathx'.frexp
-local ldexp = require'math'.ldexp or require'mathx'.ldexp
-local huge = require'math'.huge
-local tconcat = require'table'.concat
+local char = string.char
+local format = string.format
+local floor = math.floor
+local tointeger = math.tointeger or floor
+local frexp = math.frexp  -- or require'mathx'.frexp
+local ldexp = math.ldexp  -- or require'mathx'.ldexp
+local huge = math.huge
+local tconcat = table.concat
 
 local _ENV = nil
 local m = {}
