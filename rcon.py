@@ -7,6 +7,9 @@ import select
 import struct
 import time
 
+from io import BytesIO
+
+import msgpack
 
 class rconException(Exception):
     pass
@@ -74,17 +77,20 @@ class rcon(object):
             data += self.socket.recv(length - len(data))
         return data
 
-    def _receive_all(self, proc=None, stream=False, delim="\n"):
+    def _receive_all(self, unpack=False):
         if self.socket is None:
             raise rconException("Must connect before sending data")
 
         while True:
             # Read a packet
-            in_data = ""
+            in_data = b""
             (in_length,) = struct.unpack("<i", self._read(4))
             in_payload = self._read(in_length)
             in_id, in_type = struct.unpack("<ii", in_payload[:8])
             in_data_partial, in_padding = in_payload[8:-2], in_payload[-2:]
+
+            if unpack:
+                in_data_partial = in_data_partial[:-1]
 
             # Sanity checks
             if in_padding != b"\x00\x00":
@@ -93,14 +99,16 @@ class rcon(object):
                 raise rconException("Login failed")
 
             # Record the response
-            in_data += in_data_partial.decode("utf8")
+            in_data += in_data_partial
 
             # If there's nothing more to receive, return the response
             if len(select.select([self.socket], [], [], 0)[0]) == 0:
+                if unpack:
+                    return msgpack.unpackb(in_data)
                 return in_data
 
 
-    def _send(self, out_type, out_data, no_recv=False):
+    def _send(self, out_type, out_data, unpack=False):
         if self.socket is None:
             raise rconException("Must connect before sending data")
 
@@ -111,10 +119,10 @@ class rcon(object):
         out_length = struct.pack("<i", len(out_payload))
         self.socket.send(out_length + out_payload)
 
-        return self._receive_all(stream=no_recv)
+        return self._receive_all(unpack=unpack)
 
 
-    def command(self, command, no_recv=False):
-        result = self._send(2, command)
+    def command(self, command):
+        result = self._send(2, command, unpack=True)
         time.sleep(0.003)
         return result
