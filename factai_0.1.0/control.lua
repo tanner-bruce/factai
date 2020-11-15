@@ -1,5 +1,5 @@
-local factai = require "./factai/factai"
+require "commands"
 
-commands.add_command("enqueue", "enqueue", factai.enqueue)
-commands.add_command("observe", "observe", factai.state)
-script.on_event(defines.events.on_tick, factai.on_tick)
+commands.add_command("enqueue", "enqueue", commands.enqueue)
+commands.add_command("observe", "observe", commands.observe)
+script.on_event(defines.events.on_tick, commands.on_tick)

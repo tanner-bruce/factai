@@ -1,5 +1,5 @@
 
-local mp = require("./msgpack")
+local m = require("./msgpack")
 local util = require("./util")
 
 
@@ -15,7 +15,7 @@ function find_nearby_entities(e)
       -- return e.surface.find_entities(area)
 end
 
-function on_tick(event)
+function commands.on_tick(event)
     local p = game.players[1]
     if not p then end
     local pos = p.position
@@ -40,7 +40,7 @@ function on_tick(event)
     -- local aqbs = p.get_active_quick_bar_page
 end
 
-function observe(parameter)
+function commands.observe(parameter)
     local p = game.players[1]
     if not p then end
     local pos = p.position
@@ -72,26 +72,26 @@ function observe(parameter)
     --     target = {p.position.x,p.position.y},
     --     color = {r = 1},
     -- }
-    fmt = "{tick=%d,position={x=%f,y=%f},walking_state={%s}"
+    -- fmt = "{tick=%d,position={x=%f,y=%f},walking_state={%s}"
     -- args = {parameter.tick, pos.x, pos.y, stringify(ws)} 
-    str = string.format(fmt, parameter.tick, pos.x, pos.y, util.stringify(ws))
+    -- str = string.format(fmt, parameter.tick, pos.x, pos.y, util.stringify(ws))
 
-    ents = "["
-    for i, ent in ipairs(find_nearby_entities(p)) do
-        ents = ents .. string.format("{name=%s,position={%f,%f}},", ent.name, ent.position.x, ent.position.y)
-    end
-    ents = ents:sub(1, -2) .. "]"
 
-    str = str .. ",entities=" .. ents
+    -- ents = "["
+    -- for i, ent in ipairs(find_nearby_entities(p)) do
+    --     ents = ents .. string.format("{name=%s,position={%f,%f}},", ent.name, ent.position.x, ent.position.y)
+    -- end
+    -- ents = ents:sub(1, -2) .. "]"
 
-    if ic then
-        str = str .. string.format(",shooting_state={state=%s,position={x=%f,y=%f}}", ss.state, ss.position.x, ss.position.y)
-    end
-    str = str .. "}"
-    rcon.print(str)
+    -- str = str .. ",entities=" .. ents
+
+    -- if ic then
+    --     str = str .. string.format(",shooting_state={state=%s,position={x=%f,y=%f}}", ss.state, ss.position.x, ss.position.y)
+    -- end
+    -- str = str .. "}"
+    rcon.print(m.pack(p.walking_state))
 end
 
-function enqueue(parameter)
-    global["walk_ticks"] = 120
+function commands.enqueue(parameter)
     rcon.print("howdy")
 end
