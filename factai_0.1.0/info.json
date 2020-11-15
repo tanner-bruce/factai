@@ -1,0 +1,11 @@
+{
+  "name": "factai",
+  "version": "0.1.0",
+  "title": "factai",
+  "author": "bananamana",
+  "description": "no desc",
+  "factorio_version": "1.0",
+  "dependencies": [
+    "base >= 1.0.0"
+  ]
+}
