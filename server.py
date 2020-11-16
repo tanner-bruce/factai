@@ -1,7 +1,10 @@
-from pyfactorio.api.api import start
-
-def main():
-    start()
+from pyfactorio.api.api import FactorioRunner,FactorioClient
 
 if __name__ == '__main__':
-    main()
+    fr = FactorioRunner()
+    fr.start()
+
+    fc = FactorioClient()
+    fr.add_client(fc)
+
+    fc.observe()

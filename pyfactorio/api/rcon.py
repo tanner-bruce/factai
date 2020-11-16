@@ -64,7 +64,7 @@ class rcon(object):
             self.socket = ctx.wrap_socket(self.socket, server_hostname=self.host)
 
         self.socket.connect((self.host, self.port))
-        self._send(3, self.password)
+        print(self._send(3, self.password))
 
     def disconnect(self):
         if self.socket is not None:
@@ -77,37 +77,6 @@ class rcon(object):
             data += self.socket.recv(length - len(data))
         return data
 
-    def _receive_all(self, unpack=False):
-        if self.socket is None:
-            raise rconException("Must connect before sending data")
-
-        while True:
-            # Read a packet
-            in_data = b""
-            (in_length,) = struct.unpack("<i", self._read(4))
-            in_payload = self._read(in_length)
-            in_id, in_type = struct.unpack("<ii", in_payload[:8])
-            in_data_partial, in_padding = in_payload[8:-2], in_payload[-2:]
-
-            if unpack:
-                in_data_partial = in_data_partial[:-1]
-
-            # Sanity checks
-            if in_padding != b"\x00\x00":
-                raise rconException("Incorrect padding")
-            if in_id == -1:
-                raise rconException("Login failed")
-
-            # Record the response
-            in_data += in_data_partial
-
-            # If there's nothing more to receive, return the response
-            if len(select.select([self.socket], [], [], 0)[0]) == 0:
-                if unpack:
-                    return msgpack.unpackb(in_data)
-                return in_data
-
-
     def _send(self, out_type, out_data, unpack=False):
         if self.socket is None:
             raise rconException("Must connect before sending data")
@@ -119,10 +88,23 @@ class rcon(object):
         out_length = struct.pack("<i", len(out_payload))
         self.socket.send(out_length + out_payload)
 
-        return self._receive_all(unpack=unpack)
+        in_len = struct.unpack('<i', self._read(4))
+        in_payload = self._read(in_len[0])
 
+        in_id, in_type = struct.unpack('<ii', in_payload[:8])
+        in_data, in_padd = in_payload[8:-2], in_payload[-2:]
 
-    def command(self, command):
-        result = self._send(2, command, unpack=True)
+        if in_padd != b'\x00\x00':
+            raise rconException('Incorrect padding.')
+        if in_id == -1:
+            raise rconException('Incorrect password.')
+
+        if unpack is True:
+            return msgpack.unpackb(in_data[:-1])
+        else:
+            return in_data.decode('utf8')
+
+    def command(self, command, unpack=True):
+        result = self._send(2, command, unpack)
         time.sleep(0.003)
         return result
