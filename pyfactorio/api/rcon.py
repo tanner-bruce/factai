@@ -11,6 +11,7 @@ from io import BytesIO
 
 import msgpack
 
+
 class rconException(Exception):
     pass
 
@@ -88,21 +89,21 @@ class rcon(object):
         out_length = struct.pack("<i", len(out_payload))
         self.socket.send(out_length + out_payload)
 
-        in_len = struct.unpack('<i', self._read(4))
+        in_len = struct.unpack("<i", self._read(4))
         in_payload = self._read(in_len[0])
 
-        in_id, in_type = struct.unpack('<ii', in_payload[:8])
+        in_id, in_type = struct.unpack("<ii", in_payload[:8])
         in_data, in_padd = in_payload[8:-2], in_payload[-2:]
 
-        if in_padd != b'\x00\x00':
-            raise rconException('Incorrect padding.')
+        if in_padd != b"\x00\x00":
+            raise rconException("Incorrect padding.")
         if in_id == -1:
-            raise rconException('Incorrect password.')
+            raise rconException("Incorrect password.")
 
         if unpack is True:
             return msgpack.unpackb(in_data[:-1])
         else:
-            return in_data.decode('utf8')
+            return in_data.decode("utf8")
 
     def command(self, command, unpack=True):
         result = self._send(2, command, unpack)

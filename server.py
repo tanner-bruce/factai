@@ -1,6 +1,6 @@
-from pyfactorio.api.api import FactorioRunner,FactorioClient
+from pyfactorio.api.api import FactorioRunner, FactorioClient
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fr = FactorioRunner()
     fr.start()
 

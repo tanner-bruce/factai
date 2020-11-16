@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-from pyfactorio.api.rcon import rcon,rconException
+from pyfactorio.api.rcon import rcon, rconException
 
 
 class FactorioClient:
@@ -27,23 +27,23 @@ class FactorioClient:
         self._max_h = 1080.0
         self._width = display_info[0][b"width"]
         self._height = display_info[0][b"height"]
-        self._tiles_w = (60.0*self._width) / (self._zoom*self._max_w)
-        self._tiles_h = (32.0*self._height) / (self._zoom*self._max_h)
+        self._tiles_w = (60.0 * self._width) / (self._zoom * self._max_w)
+        self._tiles_h = (32.0 * self._height) / (self._zoom * self._max_h)
 
     def quit(self):
         self._quitting = True
 
     def observe(self):
-        interval = 1.0/1.0
+        interval = 1.0 / 1.0
         count = 0
         while True:
             if self._quitting is True:
                 return
             time.sleep(interval - time.monotonic() % interval)
             # file_object.write(print_state())
-            print(self._rcon.command("/observe"))
+            print(self._rcon.command("/observe 5"))
             count += 1
-            if count > 60*5:
+            if count > 60 * 5:
                 break
 
 
@@ -53,7 +53,7 @@ class FactorioRunner:
         self._ready = False
 
     def start(self):
-        thread = Thread(target = self._run_headless_server, args = (0, ))
+        thread = Thread(target=self._run_headless_server, args=(0,))
         thread.start()
 
         while self._ready is False:
@@ -67,14 +67,11 @@ class FactorioRunner:
             time.sleep(0.05)
             self._proc.terminate()
 
-        signal.signal(signal.SIGINT, flip)
+        self.terminate = flip
+        signal.signal(signal.SIGINT, self.terminate)
 
     def add_client(self, client):
         self._clients.append(client)
-
-    def terminate(self):
-        if self._proc is not None:
-            self._proc.terminate()
 
     def _run_headless_server(self, args):
         args = [
@@ -82,13 +79,15 @@ class FactorioRunner:
             "--rcon-bind=127.0.0.1:9889",
             "--rcon-password=pass",
             "--start-server=sb.zip",
-            "--config=E:/programming/factorio/factai/run/config.ini"
+            "--config=E:/programming/factorio/factai/run/config.ini",
         ]
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd="run")
+        process = subprocess.Popen(
+            args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd="run"
+        )
         self._proc = process
         while True:
             output = self._proc.stdout.readline()
-            if output == b'' and process.poll() is not None:
+            if output == b"" and process.poll() is not None:
                 break
             if output:
                 out = output.decode()
@@ -97,4 +96,3 @@ class FactorioRunner:
                     self._ready = True
 
                 print(out, end="")
-

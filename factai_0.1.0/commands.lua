@@ -60,6 +60,12 @@ function commands.on_tick(event)
 end
 
 function commands.observe(parameter)
+    game.tick_paused = true
+    if game.ticks_to_run - parameter.parameter > 0 then
+        return m.pack("ip")
+    end
+    game.ticks_to_run = parameter.parameter
+    
     local p = game.players[1]
     if not p then end
     local pos = p.position
