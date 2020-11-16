@@ -2,21 +2,40 @@
 local m = require("./msgpack")
 local util = require("./util")
 
+function find_nearby_entities(e, force)
+    local radius = 110
+    local pos = e.position;
+    local px = pos.x
+    local py = pos.y -- I'm just unrolling everything now...
+    local area = {
+       {px-radius, py-radius},
+       {px+radius, py+radius}}
+    return e.surface.find_entities_filtered{area = area, force = {force}}
+    -- return e.surface.find_entities(area)
+end
 
-function find_nearby_entities(e)
-      local radius = 110
-      local pos = e.position;
-      local px = pos.x
-      local py = pos.y -- I'm just unrolling everything now...
-      local area = {
-         {px-radius, py-radius},
-         {px+radius, py+radius}}
-      return e.surface.find_entities_filtered{area = area, force = {"enemy"}}
-      -- return e.surface.find_entities(area)
+function get_visible_bounds(e)
+    local pos = e.position;
+    local px = pos.x
+    local py = pos.y
+    local max_w = 1920.0
+    local max_h = 1080.0
+    local dsc = 0.6
+    local dsr = e.display_resolution
+    local w_off = ((60.0*dsr.width) / (2.0*dsc*max_w))
+    local h_off = ((32.0*dsr.height) / (2.0*dsc*max_h))
+    return {
+       {px-w_off, py-h_off},
+       {px+w_off, py+h_off}}
+end
+
+function find_visible_entities(e, force)
+    local area = get_visible_bounds(e)
+    return e.surface.find_entities_filtered{area = area, force = {force}}
 end
 
 function commands.on_tick(event)
-    local p = game.players[1]
+    local p = game.players[2]
     if not p then end
     local pos = p.position
     local ws = p.walking_state
@@ -52,6 +71,7 @@ function commands.observe(parameter)
     local rs = p.repair_state
     local cs = p.cursor_stack
     local cg = p.cursor_ghost
+
     -- local cq = p.crafting_queue
     local ic = p.in_combat
     -- local cmp = p.character_mining_progress
@@ -61,9 +81,7 @@ function commands.observe(parameter)
     -- local kills = ent.kills
     -- local effects = ent.effects
     -- local last_dmg = ent.tick_of_last_damage
-
     -- local sel = p.selected
-
     -- local aqbs = p.get_active_quick_bar_page
 
     -- rendering.draw_text{
@@ -72,26 +90,35 @@ function commands.observe(parameter)
     --     target = {p.position.x,p.position.y},
     --     color = {r = 1},
     -- }
-    -- fmt = "{tick=%d,position={x=%f,y=%f},walking_state={%s}"
-    -- args = {parameter.tick, pos.x, pos.y, stringify(ws)} 
-    -- str = string.format(fmt, parameter.tick, pos.x, pos.y, util.stringify(ws))
 
 
-    -- ents = "["
-    -- for i, ent in ipairs(find_nearby_entities(p)) do
-    --     ents = ents .. string.format("{name=%s,position={%f,%f}},", ent.name, ent.position.x, ent.position.y)
-    -- end
-    -- ents = ents:sub(1, -2) .. "]"
+    --
 
-    -- str = str .. ",entities=" .. ents
+    local player_feature_vec = {
+        parameter.tick,pos,ws,ic,ss
+    }
+    entities = {}
+    for i, ent in ipairs(find_visible_entities(p)) do
+        el = entities[ent.name] or {}
+        table.insert(el, {ent.position, ent.health, ent.get_health_ratio()})
+        entities[ent.name] = el
+    end
 
-    -- if ic then
-    --     str = str .. string.format(",shooting_state={state=%s,position={x=%f,y=%f}}", ss.state, ss.position.x, ss.position.y)
-    -- end
-    -- str = str .. "}"
-    rcon.print(m.pack(p.walking_state))
+    out = {
+        player_feature_vec,
+        entities
+    }
+
+    rcon.print(m.pack(out))
 end
 
 function commands.enqueue(parameter)
     rcon.print("howdy")
+end
+
+function commands.zoom(parameter)
+    local p = game.players[1]
+    if not p then return end
+    p.zoom = parameter.parameter
+    rcon.print(m.pack{p.display_resolution,parameter})
 end
