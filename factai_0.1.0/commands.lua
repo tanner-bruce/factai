@@ -14,7 +14,7 @@ function find_nearby_entities(e, force)
     -- return e.surface.find_entities(area)
 end
 
-function get_visible_bounds(e)
+function get_visible_offsets(e)
     local pos = e.position;
     local px = pos.x
     local py = pos.y
@@ -24,6 +24,10 @@ function get_visible_bounds(e)
     local dsr = e.display_resolution
     local w_off = ((60.0*dsr.width) / (2.0*dsc*max_w))
     local h_off = ((32.0*dsr.height) / (2.0*dsc*max_h))
+    return {w_off, h_off}
+
+function get_visible_bounds(e)
+    w_off, h_off = get_visible_offsets(e)
     return {
        {px-w_off, py-h_off},
        {px+w_off, py+h_off}}
@@ -60,14 +64,14 @@ function commands.on_tick(event)
 end
 
 function commands.observe(parameter)
-    game.tick_paused = true
-    if game.ticks_to_run - parameter.parameter > 0 then
-        return m.pack("ip")
-    end
-    game.ticks_to_run = parameter.parameter
+    -- game.tick_paused = true
+    -- if game.ticks_to_run - parameter.parameter > 0 then
+    --     return m.pack("ip")
+    -- end
+    -- game.ticks_to_run = parameter.parameter
     
     local p = game.players[1]
-    if not p then end
+    if not p then return end
     local pos = p.position
     local ws = p.walking_state
     local rds = p.riding_state
@@ -101,7 +105,7 @@ function commands.observe(parameter)
     --
 
     local player_feature_vec = {
-        parameter.tick,pos,ws,ic,ss
+        parameter.tick,pos.x,pos.y,ws.walking_state,ws.direction,ic,ss
     }
     entities = {}
     for i, ent in ipairs(find_visible_entities(p)) do
@@ -115,7 +119,9 @@ function commands.observe(parameter)
         entities
     }
 
+    output = m.pack(out)
     rcon.print(m.pack(out))
+    game.print(m.unpack(output))
 end
 
 function commands.enqueue(parameter)
