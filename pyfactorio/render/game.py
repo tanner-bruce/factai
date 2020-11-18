@@ -24,6 +24,7 @@ import itertools
 import math
 import os
 import platform
+from pyfactorio.env.controller import FactorioController
 import re
 import subprocess
 import threading
@@ -326,7 +327,7 @@ class RendererHuman(object):
         """
         self._game_info = game_info
         self._static_data = static_data
-        self._map_size = point.Point.build(game_info.map_size)
+        # self._map_size = point.Point.build(game_info.map_size)
         try:
             self.init_window()
             self._initialized = True
@@ -359,24 +360,19 @@ class RendererHuman(object):
         main_screen_px = self._feature_screen_px
 
         window_size_ratio = main_screen_px
-        num_feature_layers = 0
-        if self._render_feature_grid:
-            # Want a roughly square grid of feature layers, each being roughly square.
-            if self._feature_screen_px:
-                num_feature_layers += len(features.SCREEN_FEATURES)
-                # num_feature_layers += len(features.MINIMAP_FEATURES)
-            if num_feature_layers > 0:
-                feature_cols = math.ceil(math.sqrt(num_feature_layers))
-                feature_rows = math.ceil(num_feature_layers / feature_cols)
-                features_layout = point.Point(
-                    feature_cols, feature_rows * 1.05
-                )  # Make room for titles.
+        num_feature_layers = 9
+        if num_feature_layers > 0:
+            feature_cols = math.ceil(math.sqrt(num_feature_layers))
+            feature_rows = math.ceil(num_feature_layers / feature_cols)
+            features_layout = point.Point(
+                feature_cols, feature_rows * 1.05
+            )  # Make room for titles.
 
-                # Scale features_layout to main_screen_px height so we know its width.
-                features_aspect_ratio = (
-                    features_layout * main_screen_px.y / features_layout.y
-                )
-                window_size_ratio += point.Point(features_aspect_ratio.x, 0)
+            # Scale features_layout to main_screen_px height so we know its width.
+            features_aspect_ratio = (
+                features_layout * main_screen_px.y / features_layout.y
+            )
+            window_size_ratio += point.Point(features_aspect_ratio.x, 0)
 
         window_size_px = window_size_ratio.scale_max_size(
             get_desktop_size() * self._window_scale
@@ -410,32 +406,32 @@ class RendererHuman(object):
         #     screen_size_px / self._feature_screen_px)
 
         # World has origin at bl, world_tl has origin at tl.
-        self._world_to_world_tl = transform.Linear(
-            point.Point(1, -1), point.Point(0, self._map_size.y)
-        )
+        # self._world_to_world_tl = transform.Linear(
+        #     point.Point(1, -1), point.Point(0, self._map_size.y)
+        # )
 
-        # Move the point to be relative to the camera. This gets updated per frame.
-        self._world_tl_to_world_camera_rel = transform.Linear(
-            offset=-self._map_size / 4
-        )
+        # # Move the point to be relative to the camera. This gets updated per frame.
+        # self._world_tl_to_world_camera_rel = transform.Linear(
+        #     offset=-self._map_size / 4
+        # )
 
-        # Feature layer locations in continuous space.
-        feature_world_per_pixel = (
-            self._feature_screen_px / self._feature_camera_width_world_units
-        )
-        world_camera_rel_to_feature_screen = transform.Linear(
-            feature_world_per_pixel, self._feature_screen_px / 2
-        )
+        # # Feature layer locations in continuous space.
+        # feature_world_per_pixel = (
+        #     self._feature_screen_px / self._feature_camera_width_world_units
+        # )
+        # world_camera_rel_to_feature_screen = transform.Linear(
+        #     feature_world_per_pixel, self._feature_screen_px / 2
+        # )
 
-        self._world_to_feature_screen = transform.Chain(
-            self._world_to_world_tl,
-            self._world_tl_to_world_camera_rel,
-            world_camera_rel_to_feature_screen,
-        )
+        # self._world_to_feature_screen = transform.Chain(
+        #     self._world_to_world_tl,
+        #     self._world_tl_to_world_camera_rel,
+        #     world_camera_rel_to_feature_screen,
+        # )
 
-        self._world_to_feature_screen_px = transform.Chain(
-            self._world_to_feature_screen, transform.PixelToCoord()
-        )
+        # self._world_to_feature_screen_px = transform.Chain(
+        #     self._world_to_feature_screen, transform.PixelToCoord()
+        # )
 
         # add_surface(SurfType.FEATURE | SurfType.SCREEN,
         #             point.Rect(point.origin, screen_size_px),
@@ -445,7 +441,7 @@ class RendererHuman(object):
         #             self._world_to_feature_screen_px,
         #             self.draw_screen)
 
-        if self._render_feature_grid and num_feature_layers > 0:
+        if num_feature_layers > 0:
             # Add the raw and feature layers
             features_loc = point.Point(screen_size_px.x, 0)
             feature_pane = self._window.subsurface(
@@ -515,7 +511,7 @@ class RendererHuman(object):
                 )
 
     @sw.decorate
-    def get_actions(self, controller):
+    def get_actions(self, controller: FactorioController):
         """Get actions from the UI, apply to controller, and return an ActionCmd."""
         if not self._initialized:
             return ActionCmd.STEP
@@ -568,7 +564,7 @@ class RendererHuman(object):
         layer = feature.unpack(self._obs.observation)
         if layer is not None:
             surf.blit_np_array(feature.color(layer))
-        else:  # Ignore layers that aren't in this version of SC2.
+        else:
             surf.surf.fill(colors.black)
 
     def all_surfs(self, fn, *args, **kwargs):

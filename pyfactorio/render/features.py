@@ -207,46 +207,6 @@ class Feature(
 
     __slots__ = ()
 
-    dtypes = {
-        1: np.uint8,
-        8: np.uint8,
-        16: np.uint16,
-        32: np.int32,
-    }
-
-    def unpack(self, obs):
-        """Return a correctly shaped numpy array for this feature."""
-        planes = getattr(obs.feature_layer_data, self.layer_set)
-        plane = getattr(planes, self.name)
-        return self.unpack_layer(plane)
-
-    @staticmethod
-    @sw.decorate
-    def unpack_layer(plane):
-        """Return a correctly shaped numpy array given the feature layer bytes."""
-        size = point.Point.build(plane.size)
-        if size == (0, 0):
-            # New layer that isn't implemented in this SC2 version.
-            return None
-        data = np.frombuffer(plane.data, dtype=Feature.dtypes[plane.bits_per_pixel])
-        if plane.bits_per_pixel == 1:
-            data = np.unpackbits(data)
-            if data.shape[0] != size.x * size.y:
-                # This could happen if the correct length isn't a multiple of 8, leading
-                # to some padding bits at the end of the string which are incorrectly
-                # interpreted as data.
-                data = data[: size.x * size.y]
-        return data.reshape(size.y, size.x)
-
-    @staticmethod
-    @sw.decorate
-    def unpack_rgb_image(plane):
-        """Return a correctly shaped numpy array given the image bytes."""
-        assert plane.bits_per_pixel == 24, "{} != 24".format(plane.bits_per_pixel)
-        size = point.Point.build(plane.size)
-        data = np.frombuffer(plane.data, dtype=np.uint8)
-        return data.reshape(size.y, size.x, 3)
-
     @sw.decorate
     def color(self, plane):
         if self.clip:
@@ -318,7 +278,7 @@ SCREEN_FEATURES = ScreenFeatures(
     entity_type=(
         max(static_data.UNIT_TYPES) + 1,
         FeatureType.CATEGORICAL,
-        colors.entity_type,
+        colors.yellow,
         False,
     ),
     # powered=(2, FeatureType.CATEGORICAL, colors.hot, False),
@@ -456,20 +416,72 @@ class Dimensions(object):
 class Features(object):
     def __init__(self, map_size=None):
         print("init")
+        self._map_size = map_size
 
-    def observation_spec(self):
-        # TODO TB - obersavtion_spec IMPOORTANT
-        # pytype: disable=wrong-arg-types
-        obs_spec = named_array.NamedDict(
-            {
-                # "alerts": (0,),  # See sc2api.proto: Alert.
-                "tick": (1,),
-                # "last_actions": (0,),
-                # "map_name": (0,),
-                "player": (len(Player),),
-                # "score_cumulative": (len(ScoreCumulative),),
-                # "score_by_category": (len(ScoreByCategory), len(ScoreCategories)),
-                # "score_by_vital": (len(ScoreByVital), len(ScoreVitals)),
-                # "single_select": (0, len(UnitLayer)),  # Only (n, 7) for n in (0, 1).
-            }
-        )
+    @classmethod
+    def unpack_obs(obs):
+        tick = obs[0][0] # type: ignore
+        xpos = obs[0][1] # type: ignore
+        ypos = obs[0][2] # type: ignore
+        walking = obs[0][3] # type: ignore
+        direction = obs[0][4] # type: ignore
+        incombat = obs[0][5] # type: ignore
+        shooting = obs[0][6] # type: ignore
+
+        entities = obs[1] # type: ignore
+
+
+        fm = {}
+        for k, v in entities:
+            es = fm[k]
+            e_xpos = v[0]
+            e_ypos = v[1]
+            e_health = v[2]
+            e_hr = v[3]
+
+
+
+        # self.init_camera(
+        #     aif.feature_dimensions,
+        #     map_size,
+        #     aif.camera_width_world_units,
+        #     aif.raw_resolution,
+        # )
+
+        # self._valid_functions = _init_valid_functions(aif.action_dimensions)
+
+    # def init_camera(self, feature_dimensions, camera_width_world_units, raw_resolution):
+    #     """Initialize the camera (especially for feature_units).
+    #     This is called in the constructor and may be called repeatedly after
+    #     `Features` is constructed, since it deals with rescaling coordinates and not
+    #     changing environment/action specs.
+    #     Args:
+    #     feature_dimensions: See the documentation in `AgentInterfaceFormat`.
+    #     map_size: The size of the map in world units.
+    #     camera_width_world_units: See the documentation in `AgentInterfaceFormat`.
+    #     raw_resolution: See the documentation in `AgentInterfaceFormat`.
+    #     Raises:
+    #     ValueError: If map_size or camera_width_world_units are falsey (which
+    #         should mainly happen if called by the constructor).
+    #     """
+    #     map_size = point.Point.build(map_size)
+    #     self._world_to_world_tl = transform.Linear(
+    #         point.Point(1, -1), point.Point(0, map_size.y)
+    #     )
+    #     self._world_tl_to_world_camera_rel = transform.Linear(offset=-map_size / 4)
+
+    #     world_camera_rel_to_feature_screen = transform.Linear(
+    #         feature_dimensions.screen / camera_width_world_units,
+    #         feature_dimensions.screen / 2,
+    #     )
+    #     self._world_to_feature_screen_px = transform.Chain(
+    #         self._world_to_world_tl,
+    #         self._world_tl_to_world_camera_rel,
+    #         world_camera_rel_to_feature_screen,
+    #         transform.PixelToCoord(),
+    #     )
+
+    #     # If we don't have a specified raw resolution, we do no transform.
+    #     world_tl_to_feature_minimap = transform.Linear(
+    #         scale=raw_resolution / map_size.max_dim() if raw_resolution else None
+    #     )
