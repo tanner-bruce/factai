@@ -315,16 +315,16 @@ SCREEN_FEATURES = ScreenFeatures(
     stone_map=(256, FeatureType.SCALAR, colors.hot, False),
     # player_id=(17, FeatureType.CATEGORICAL, colors.PLAYER_ABSOLUTE_PALETTE, False),
     # items=(max(static_data.ITEMS) + 1, FeatureType.CATEGORICAL, colors.items, False),
-    unit_type=(
+    entity_type=(
         max(static_data.UNIT_TYPES) + 1,
         FeatureType.CATEGORICAL,
-        colors.unit_type,
+        colors.entity_type,
         False,
     ),
     # powered=(2, FeatureType.CATEGORICAL, colors.hot, False),
     # selected=(2, FeatureType.CATEGORICAL, colors.SELECTED_PALETTE, False),
-    unit_hit_points=(350, FeatureType.SCALAR, colors.hot, True),
-    unit_hit_points_ratio=(256, FeatureType.SCALAR, colors.hot, False),
+    entity_hit_points=(350, FeatureType.SCALAR, colors.hot, True),
+    entity_hit_points_ratio=(256, FeatureType.SCALAR, colors.hot, False),
     # buildable=(2, FeatureType.CATEGORICAL, colors.winter, False),
     # mineable=(2, FeatureType.CATEGORICAL, colors.winter, False)
 )
@@ -421,7 +421,7 @@ class Dimensions(object):
     """
 
     def __init__(self, screen=None, minimap=None):
-        if not screen or not minimap:
+        if not screen:
             raise ValueError(
                 "screen and minimap must both be set, screen={}, minimap={}".format(
                     screen, minimap
@@ -429,75 +429,32 @@ class Dimensions(object):
             )
 
         self._screen = _to_point(screen)
-        self._minimap = _to_point(minimap)
+        # self._minimap = _to_point(minimap)
 
     @property
     def screen(self):
         return self._screen
 
-    @property
-    def minimap(self):
-        return self._minimap
+    # @property
+    # def minimap(self):
+    #     return self._minimap
 
     def __repr__(self):
-        return "Dimensions(screen={}, minimap={})".format(self.screen, self.minimap)
+        return "Dimensions(screen={})".format(self.screen)
 
     def __eq__(self, other):
         return (
             isinstance(other, Dimensions)
             and self.screen == other.screen
-            and self.minimap == other.minimap
+            # and self.minimap == other.minimap
         )
 
     def __ne__(self, other):
         return not self == other
 
 
-class AgentInterfaceFormat(object):
-    """Observation and action interface format specific to a particular agent."""
-
-    def __init__(
-        self, feature_dimensions, action_delay_fn=None, send_observation_proto=False
-    ):
-        """Initializer.
-
-        Args:
-          feature_dimensions: Feature layer `Dimension`s
-          camera_width_world_units: The width of your screen in world units. If your
-              feature_dimensions.screen=(64, 48) and camera_width is 24, then each
-              px represents 24 / 64 = 0.375 world units in each of x and y.
-              It'll then represent a camera of size (24, 0.375 * 48) = (24, 18)
-              world units.
-          action_delay_fn: A callable which when invoked returns a delay in game
-              loops to apply to a requested action. Defaults to None, meaning no
-              delays are added (actions will be executed on the next game loop,
-              hence with the minimum delay of 1).
-          send_observation_proto: Whether or not to send the raw observation
-              response proto in the observations.
-        Raises:
-          ValueError: if the parameters are inconsistent.
-        """
-
-        if not feature_dimensions:
-            raise ValueError(
-                "Must set either the feature layer or rgb dimensions, "
-                "or use raw units."
-            )
-
-        self._feature_dimensions = feature_dimensions
-        self._action_delay_fn = action_delay_fn
-
-    @property
-    def feature_dimensions(self):
-        return self._feature_dimensions
-
-    @raw_resolution.setter
-    def raw_resolution(self, value):
-        self._raw_resolution = value
-
-
 class Features(object):
-    def __init__(self, agent_interface_format=None, map_size=None):
+    def __init__(self, map_size=None):
         print("init")
 
     def observation_spec(self):
@@ -505,15 +462,14 @@ class Features(object):
         # pytype: disable=wrong-arg-types
         obs_spec = named_array.NamedDict(
             {
-                "action_result": (0,),  # See error.proto: ActionResult.
                 # "alerts": (0,),  # See sc2api.proto: Alert.
-                "game_loop": (1,),
+                "tick": (1,),
                 # "last_actions": (0,),
                 # "map_name": (0,),
                 "player": (len(Player),),
-                "score_cumulative": (len(ScoreCumulative),),
-                "score_by_category": (len(ScoreByCategory), len(ScoreCategories)),
-                "score_by_vital": (len(ScoreByVital), len(ScoreVitals)),
-                "single_select": (0, len(UnitLayer)),  # Only (n, 7) for n in (0, 1).
+                # "score_cumulative": (len(ScoreCumulative),),
+                # "score_by_category": (len(ScoreByCategory), len(ScoreCategories)),
+                # "score_by_vital": (len(ScoreByVital), len(ScoreVitals)),
+                # "single_select": (0, len(UnitLayer)),  # Only (n, 7) for n in (0, 1).
             }
         )

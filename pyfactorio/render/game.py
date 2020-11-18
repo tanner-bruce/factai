@@ -186,7 +186,7 @@ class _Surface(object):
 
 
 @memoize.memoize
-def _get_desktop_size():
+def get_desktop_size():
     """Get the desktop size."""
     if platform.system() == "Linux":
         try:
@@ -362,8 +362,6 @@ class RendererHuman(object):
         num_feature_layers = 0
         if self._render_feature_grid:
             # Want a roughly square grid of feature layers, each being roughly square.
-            if self._game_info.options.raw:
-                num_feature_layers += 5
             if self._feature_screen_px:
                 num_feature_layers += len(features.SCREEN_FEATURES)
                 # num_feature_layers += len(features.MINIMAP_FEATURES)
@@ -381,7 +379,7 @@ class RendererHuman(object):
                 window_size_ratio += point.Point(features_aspect_ratio.x, 0)
 
         window_size_px = window_size_ratio.scale_max_size(
-            _get_desktop_size() * self._window_scale
+            get_desktop_size() * self._window_scale
         ).ceil()
 
         # Create the actual window surface. This should only be blitted to from one
@@ -517,7 +515,7 @@ class RendererHuman(object):
                 )
 
     @sw.decorate
-    def get_actions(self, run_config, controller):
+    def get_actions(self, controller):
         """Get actions from the UI, apply to controller, and return an ActionCmd."""
         if not self._initialized:
             return ActionCmd.STEP
@@ -562,22 +560,6 @@ class RendererHuman(object):
                     else:
                         self._fps *= 1.25 if event.key == pygame.K_PAGEUP else 1 / 1.25
                         print("New max game speed: %.1f" % self._fps)
-                # else:
-                #   if not self._queued_action:
-                #     key = pygame.key.name(event.key).lower()
-                #     new_cmd = self._queued_hotkey + key
-                #     cmds = self._abilities(lambda cmd, n=new_cmd: (
-                #         cmd.hotkey != "escape" and cmd.hotkey.startswith(n)))
-                #     if cmds:
-                #       self._queued_hotkey = new_cmd
-                #       if len(cmds) == 1:
-                #         cmd = cmds[0]
-                #         if cmd.hotkey == self._queued_hotkey:
-                #           if cmd.requires_point:
-                #             self.clear_queued_action()
-                #             self._queued_action = cmd
-                #           else:
-                #             controller.act(self.unit_action(cmd, None, shift))
         return ActionCmd.STEP
 
     @sw.decorate
@@ -594,23 +576,6 @@ class RendererHuman(object):
             if surf.world_to_surf:
                 fn(surf, *args, **kwargs)
 
-    @sw.decorate
-    def render(self, obs):
-        """Push an observation onto the queue to be rendered."""
-        if not self._initialized:
-            return
-        now = time.time()
-        self._game_times.append(
-            (
-                now - self._last_time,
-                max(1, obs.observation.game_loop - self._obs.observation.game_loop),
-            )
-        )
-        self._last_time = now
-        self._last_game_loop = self._obs.observation.game_loop
-        self._obs_queue.put(obs)
-        if self._render_sync:
-            self._obs_queue.join()
 
     def render_thread(self):
         """A render loop that pulls observations off the queue to render."""
@@ -631,6 +596,25 @@ class RendererHuman(object):
                     self.render_obs(obs)
             self._obs_queue.task_done()
 
+    @sw.decorate
+    def render(self, obs):
+        """Push an observation onto the queue to be rendered."""
+        if not self._initialized:
+            return
+        now = time.time()
+        self._game_times.append(
+            (
+                now - self._last_time,
+                max(1, obs.observation.game_loop - self._obs.observation.game_loop),
+            )
+        )
+        self._last_time = now
+        self._last_game_loop = self._obs.observation.game_loop
+        self._obs_queue.put(obs)
+        if self._render_sync:
+            self._obs_queue.join()
+
+
     @with_lock(render_lock)
     @sw.decorate
     def render_obs(self, obs):
@@ -640,7 +624,6 @@ class RendererHuman(object):
         self._obs = obs
 
         for surf in self._surfaces:
-            # Render that surface.
             surf.draw(surf)
 
         # mouse_pos = self.get_mouse_pos()
@@ -653,79 +636,3 @@ class RendererHuman(object):
             pygame.display.flip()
 
         self._render_times.append(time.time() - start_time)
-
-    def run(
-        self,
-        run_config,
-        controller,
-        max_game_steps=0,
-        max_episodes=0,
-        game_steps_per_episode=0,
-        save_replay=False,
-    ):
-        """Run loop that gets observations, renders them, and sends back actions."""
-        total_game_steps = 0
-        start_time = time.time()
-        num_episodes = 0
-
-        try:
-            while True:
-                self.init(controller.game_info(), controller.data())
-                episode_steps = 0
-                num_episodes += 1
-
-                controller.step()
-
-                while True:
-                    total_game_steps += self._step_mul
-                    episode_steps += self._step_mul
-                    frame_start_time = time.time()
-
-                    obs = controller.observe()
-                    self.render(obs)
-
-                    if obs.player_result:
-                        break
-
-                    cmd = self.get_actions(run_config, controller)
-                    if cmd == ActionCmd.STEP:
-                        pass
-                    elif cmd == ActionCmd.QUIT:
-                        return
-                    elif cmd == ActionCmd.RESTART:
-                        break
-                    else:
-                        raise Exception("Unexpected command: %s" % cmd)
-
-                    controller.step(self._step_mul)
-
-                    if max_game_steps and total_game_steps >= max_game_steps:
-                        return
-
-                    if (
-                        game_steps_per_episode
-                        and episode_steps >= game_steps_per_episode
-                    ):
-                        break
-
-                    with sw("sleep"):
-                        elapsed_time = time.time() - frame_start_time
-                        time.sleep(max(0, 1 / self._fps - elapsed_time))
-
-                if max_episodes and num_episodes >= max_episodes:
-                    break
-
-                print("Restarting")
-                controller.restart()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            self.close()
-            elapsed_time = time.time() - start_time
-            print(
-                "took %.3f seconds for %s steps: %.3f fps"
-                % (elapsed_time, total_game_steps, total_game_steps / elapsed_time)
-            )
-
-    def __del__(self):
-        self.close()

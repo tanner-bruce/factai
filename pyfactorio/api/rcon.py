@@ -7,8 +7,6 @@ import select
 import struct
 import time
 
-from io import BytesIO
-
 import msgpack
 
 
