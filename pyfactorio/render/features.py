@@ -421,20 +421,19 @@ class Features(object):
 
     @classmethod
     def unpack_obs(cls, obs):
-        tick = obs[0][0] # type: ignore
-        xpos = obs[0][1] # type: ignore
-        ypos = obs[0][2] # type: ignore
-        walking = obs[0][3] # type: ignore
-        direction = obs[0][4] # type: ignore
-        incombat = obs[0][5] # type: ignore
-        shooting = obs[0][6] # type: ignore
+        tick = obs[0][0]  # type: ignore
+        xpos = obs[0][1]  # type: ignore
+        ypos = obs[0][2]  # type: ignore
+        walking = obs[0][3]  # type: ignore
+        direction = obs[0][4]  # type: ignore
+        incombat = obs[0][5]  # type: ignore
+        shooting = obs[0][6]  # type: ignore
 
-        entities = obs[1] # type: ignore
+        entities = obs[1]  # type: ignore
 
         # # layers
         fm = {
-            "tree_map"
-            "iron_map",
+            "tree_map" "iron_map",
             "copper_map",
             "oil_map",
             "uranium_map",
@@ -444,7 +443,6 @@ class Features(object):
             "unit_hit_points",
             "unit_hit_points_ratio",
         }
-
 
         fm = {}
         for name, ents in entities:
@@ -457,17 +455,7 @@ class Features(object):
                 e_health = e[2]
                 e_hr = e[3]
 
-        return [
-            tick,
-            xpos,
-            ypos,
-            walking,
-            direction,
-            incombat,
-            shooting
-        ]
-
-
+        return [tick, xpos, ypos, walking, direction, incombat, shooting]
 
         # self.init_camera(
         #     aif.feature_dimensions,

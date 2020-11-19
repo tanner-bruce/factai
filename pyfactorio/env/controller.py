@@ -4,7 +4,6 @@ import time
 from threading import Thread
 
 from pyfactorio.util import get_desktop_size
-
 from pyfactorio.api.rcon import rcon
 
 
@@ -15,10 +14,15 @@ class FactorioController:
         self._port = port
         self._ready = False
         self._rcon = None
+        self._proc = None
 
-    def __del__(self):
+    def quit(self):
+        if self._proc is not None:
+            self._proc.terminate()
+            self._proc = None
         if self._rcon is not None:
             self._rcon.disconnect()
+            self._rcon = None
 
     def restart(self):
         self._proc.terminate()
