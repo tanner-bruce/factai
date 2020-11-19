@@ -1,4 +1,3 @@
-
 local m = require("./msgpack")
 local util = require("./util")
 
@@ -15,7 +14,7 @@ function find_nearby_entities(e, force)
 end
 
 function get_visible_offsets(e)
-    local pos = e.position;
+    local pos = e.position
     local px = pos.x
     local py = pos.y
     local max_w = 1920.0
@@ -25,9 +24,12 @@ function get_visible_offsets(e)
     local w_off = ((60.0*dsr.width) / (2.0*dsc*max_w))
     local h_off = ((32.0*dsr.height) / (2.0*dsc*max_h))
     return {w_off, h_off}
+end
 
 function get_visible_bounds(e)
-    w_off, h_off = get_visible_offsets(e)
+    local offs = get_visible_offsets(e)
+    local w_off = offs[1]
+    local h_off = offs[2]
     return {
        {px-w_off, py-h_off},
        {px+w_off, py+h_off}}
@@ -110,7 +112,7 @@ function commands.observe(parameter)
     entities = {}
     for i, ent in ipairs(find_visible_entities(p)) do
         el = entities[ent.name] or {}
-        table.insert(el, {ent.position, ent.health, ent.get_health_ratio()})
+        table.insert(el, {ent.position.x, ent.position.y, ent.health, ent.get_health_ratio()})
         entities[ent.name] = el
     end
 
