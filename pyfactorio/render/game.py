@@ -96,7 +96,7 @@ class ActionCmd(enum.Enum):
 class _Surface(object):
     """A surface to display on screen."""
 
-    def __init__(self, surf, surf_type, surf_rect, world_to_surf, world_to_obs, draw):
+    def __init__(self, surf, surf_type, surf_rect, world_to_surf, draw):
         """A surface to display on screen.
 
         Args:
@@ -104,14 +104,12 @@ class _Surface(object):
           surf_type: A SurfType, used to tell how to treat clicks in that area.
           surf_rect: Rect of the surface relative to the window.
           world_to_surf: Convert a world point to a pixel on the surface.
-          world_to_obs: Convert a world point to a pixel in the observation.
           draw: A function that draws onto the surface.
         """
         self.surf = surf
         self.surf_type = surf_type
         self.surf_rect = surf_rect
         self.world_to_surf = world_to_surf
-        self.world_to_obs = world_to_obs
         self.draw = draw
 
     def draw_line(self, color, start_loc, end_loc, thickness=1):
@@ -369,12 +367,12 @@ class RendererHuman(object):
         # The sub-surfaces that the various draw functions will draw to.
         self._surfaces = []
 
-        def add_surface(surf_type, surf_loc, world_to_surf, world_to_obs, draw_fn):
+        def add_surface(surf_type, surf_loc, world_to_surf, draw_fn):
             """Add a surface. Drawn in order and intersect in reverse order."""
             sub_surf = self._window.subsurface(pygame.Rect(surf_loc.tl, surf_loc.size))
             self._surfaces.append(
                 _Surface(
-                    sub_surf, surf_type, surf_loc, world_to_surf, world_to_obs, draw_fn
+                    sub_surf, surf_type, surf_loc, world_to_surf, draw_fn
                 )
             )
 
@@ -444,7 +442,7 @@ class RendererHuman(object):
 
             feature_counter = itertools.count()
 
-            def add_layer(surf_type, world_to_surf, world_to_obs, name, fn):
+            def add_layer(surf_type, name, world_to_surf, fn):
                 """Add a layer surface."""
                 i = next(feature_counter)
                 grid_offset = (
@@ -466,31 +464,28 @@ class RendererHuman(object):
                     surf_type,
                     point.Rect(surf_loc, surf_loc + feature_layer_size).round(),
                     world_to_surf,
-                    world_to_obs,
                     fn,
                 )
 
-            def add_feature_layer(feature, surf_type, world_to_surf, world_to_obs):
+            def add_feature_layer(feature, surf_type, world_to_surf):
                 add_layer(
                     surf_type,
-                    world_to_surf,
-                    world_to_obs,
                     feature.full_name,
+                    world_to_surf,
                     lambda surf: self.draw_feature_layer(surf, feature),
                 )
 
             feature_screen_to_feature_screen_surf = transform.Linear(
-                feature_layer_size / self._feature_screen_px
-            )
+                feature_layer_size / self._feature_screen_px)
             world_to_feature_screen_surf = transform.Chain(
-                self._world_to_feature_screen, feature_screen_to_feature_screen_surf
-            )
+                self._world_to_feature_screen,
+                feature_screen_to_feature_screen_surf)
+
             for feature in features.SCREEN_FEATURES:
                 add_feature_layer(
                     feature,
                     SurfType.FEATURE | SurfType.SCREEN,
-                    world_to_feature_screen_surf,
-                    self._world_to_feature_screen_px,
+                    world_to_surf
                 )
 
     @sw.decorate

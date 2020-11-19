@@ -1,6 +1,5 @@
 tree_list = [
     "dead-dry-hairy-tree",
-    "dead-grey-trunk",
     "dead-tree-desert",
     "dry-hairy-tree",
     "dry-tree",
@@ -108,6 +107,7 @@ entity_list = [
     "crash-site-lab-repaired",
     "crude-oil",
     "crude-oil-barrel",
+    "dead-grey-trunk",
     "decider-combinator",
     "defender-capsule",
     "destroyer-capsule",

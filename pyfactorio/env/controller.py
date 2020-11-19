@@ -38,6 +38,8 @@ class FactorioController:
         self._desktop_size = get_desktop_size()
         self._width = display_info[0][b"width"]  # type: ignore
         self._height = display_info[0][b"height"]  # type: ignore
+        self._visible_x = display_info[1][0]
+        self._visible_y = display_info[1][1]
         self._tiles_w = (60.0 * self._width) / (self._zoom * self._desktop_size.x)  # type: ignore
         # TODO TB - this isn't right but it's close
         self._tiles_h = (32.0 * self._height) / (self._zoom * self._desktop_size.y)  # type: ignore
@@ -91,7 +93,7 @@ class FactorioController:
             if output:
                 out = output.decode()
                 is_ready = "joined the game"
-                if out.find(is_ready) >= -1:
+                if out.find(is_ready) >= 0:
                     self._ready = True
 
             print(out, end="")

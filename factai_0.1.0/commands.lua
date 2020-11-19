@@ -41,7 +41,7 @@ function find_visible_entities(e, force)
 end
 
 function commands.on_tick(event)
-    local p = game.players[2]
+    local p = game.players[1]
     if not p then end
     local pos = p.position
     local ws = p.walking_state
@@ -66,7 +66,7 @@ function commands.on_tick(event)
 end
 
 function commands.step(parameter)
-    -- game.tick_paused = true
+    game.tick_paused = false
     -- if game.ticks_to_run - parameter.parameter > 0 then
     --     return m.pack("ip")
     -- end
@@ -74,6 +74,7 @@ function commands.step(parameter)
 end
 
 function commands.observe(parameter)
+    game.tick_paused = false
     local p = game.players[1]
     if not p then return end
     local pos = p.position
@@ -143,5 +144,5 @@ function commands.zoom(parameter)
     local p = game.players[1]
     if not p then return end
     p.zoom = parameter.parameter
-    rcon.print(m.pack{p.display_resolution,parameter})
+    rcon.print(m.pack{p.display_resolution,get_visible_offsets(p)})
 end

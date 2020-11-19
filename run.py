@@ -15,7 +15,7 @@ h = 800
 
 display = pygame.display.set_mode((w, h))
 
-img = np.zeros((w,h,3),dtype=np.uint8)
+img = np.zeros((w, h, 3), dtype=np.uint8)
 
 
 ctrlr = FactorioController()
@@ -33,10 +33,12 @@ while running:
     fobs = Features.unpack_obs(obs)
     print(fobs)
 
+    # arr = np.array([type=np.float)
+
     surfarray.blit_array(display, img)
     pygame.display.flip()
 
-    frames_displayed+=1
+    frames_displayed += 1
 
-    interval = 1/30. - time.monotonic() % 1/30.
+    interval = 1 / 30.0 - time.monotonic() % 1 / 30.0
     time.sleep(interval)

@@ -19,7 +19,8 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-from pyfactorio.api.entities import Entities
+import pyfactorio
+from pyfactorio.api.entities import Entities, Trees
 import random
 
 import enum
@@ -219,16 +220,16 @@ class ScreenFeatures(
     collections.namedtuple(
         "ScreenFeatures",
         [
-            # "water_map",
-            # "cliff_map",
-            # "rock_map",
-            "tree_map",
-            "iron_map",
-            "copper_map",
-            "oil_map",
-            "uranium_map",
-            "coal_map",
-            "stone_map",
+            # "water_ore",
+            # "cliff_ore",
+            # "rock_ore",
+            # "tree_ore",
+            "iron_ore",
+            "copper_ore",
+            "oil",
+            # "uranium_ore",
+            "coal",
+            "stone_ore",
             # "player_id",
             # "items",
             "entity_type",
@@ -267,19 +268,19 @@ SCREEN_FEATURES = ScreenFeatures(
     # water_map=(2, FeatureType.CATEGORICAL, colors.blue, False),
     # cliff_map=(2, FeatureType.CATEGORICAL, colors.red * 0.8, False),
     # rock_map=(2, FeatureType.CATEGORICAL, colors.black, False),
-    tree_map=(2, FeatureType.CATEGORICAL, colors.green, False),
-    iron_map=(256, FeatureType.SCALAR, colors.hot, False),
-    copper_map=(256, FeatureType.SCALAR, colors.hot, False),
-    oil_map=(256, FeatureType.SCALAR, colors.hot, False),
-    uranium_map=(256, FeatureType.SCALAR, colors.hot, False),
-    coal_map=(256, FeatureType.SCALAR, colors.hot, False),
-    stone_map=(256, FeatureType.SCALAR, colors.hot, False),
+    # tree_map=(2, FeatureType.CATEGORICAL, colors.green, False),
+    iron_ore=(256, FeatureType.SCALAR, colors.hot, False),
+    copper_ore=(256, FeatureType.SCALAR, colors.hot, False),
+    oil=(256, FeatureType.SCALAR, colors.hot, False),
+    # uranium_ore=(256, FeatureType.SCALAR, colors.hot, False),
+    coal=(256, FeatureType.SCALAR, colors.hot, False),
+    stone_ore=(256, FeatureType.SCALAR, colors.hot, False),
     # player_id=(17, FeatureType.CATEGORICAL, colors.PLAYER_ABSOLUTE_PALETTE, False),
     # items=(max(static_data.ITEMS) + 1, FeatureType.CATEGORICAL, colors.items, False),
     entity_type=(
         len(Entities) + 1,
         FeatureType.CATEGORICAL,
-        colors.yellow,
+        colors.hot,
         False,
     ),
     # powered=(2, FeatureType.CATEGORICAL, colors.hot, False),
@@ -433,29 +434,68 @@ class Features(object):
 
         # # layers
         fm = {
-            "tree_map" "iron_map",
-            "copper_map",
-            "oil_map",
-            "uranium_map",
-            "coal_map",
-            "stone_map",
-            "unit_type",
-            "unit_hit_points",
-            "unit_hit_points_ratio",
+            "trees": [],
+            "iron_ore": [],
+            "copper_ore": [],
+            "coal": [],
+            "stone_ore": [],
+            "entity_type": [],
+            # ("entity_hit_points",
+            # ("entity_hit_points_ratio",
         }
+        tm = []
 
-        fm = {}
-        for name, ents in entities:
-            es = fm[name]
-            if es is None:
-                es = {}
+        hm = []
+        hmr = []
+        et = []
+        for (name, ents) in list(entities.items()):
+            og_name = name.decode()
+            new_name = og_name.replace("-","_")
+            es = None
+
+            track_indivi = False
+            is_tree = False
+
+            try:
+                es = fm[new_name]
+                track_indivi = True
+            except KeyError:
+                pass
+
+
+            if new_name.find("tree") >= 0:
+                new_name = "trees"
+                is_tree = True
+
             for e in ents:
-                e_xpos = e[0]
-                e_ypos = e[1]
-                e_health = e[2]
-                e_hr = e[3]
+                if track_indivi is True:
+                    if len(e) > 4:
+                        es.append((e[0], e[1], e[4]))
+                    else:
+                        es.append((e[0], e[1], 1))
 
-        return [tick, xpos, ypos, walking, direction, incombat, shooting]
+                if is_tree is True:
+                    tm.append((e[0], e[1], 1))
+
+                if is_tree is False:
+                    try:
+                        et.append((e[0], e[1], Entities[og_name]))
+                    except:
+                        pass
+
+                if len(e) >= 4:
+                    hm.append((e[0], e[1], e[2]))
+                    hmr.append((e[0], e[1], e[3]))
+
+                # e_xpos = e[0]
+                # e_ypos = e[1]
+                # e_health = e[2]
+                # e_hr = e[3]
+                # e[4] = custom val
+
+            if track_indivi:
+                fm[new_name] = es # type: ignore
+        return [tick, xpos, ypos, fm, tm, hm, hmr]
 
         # self.init_camera(
         #     aif.feature_dimensions,
