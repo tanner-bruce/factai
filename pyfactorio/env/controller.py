@@ -1,4 +1,5 @@
 import logging
+from pyfactorio.render import point
 import subprocess
 import time
 from threading import Thread
@@ -29,20 +30,21 @@ class FactorioController:
         self.start_game()
 
     def zoom(self, zoom=0.7):
-        self._do_zoom(zoom)
-        return zoom
+        return self._do_zoom(zoom)
 
     def _do_zoom(self, zoom):
         display_info = self._rcon.command("/zoom %f" % zoom)
         self._zoom = zoom
-        self._desktop_size = get_desktop_size()
-        self._width = display_info[0][b"width"]  # type: ignore
-        self._height = display_info[0][b"height"]  # type: ignore
-        self._visible_x = display_info[1][0]
-        self._visible_y = display_info[1][1]
-        self._tiles_w = (60.0 * self._width) / (self._zoom * self._desktop_size.x)  # type: ignore
-        # TODO TB - this isn't right but it's close
-        self._tiles_h = (32.0 * self._height) / (self._zoom * self._desktop_size.y)  # type: ignore
+        # self._desktop_size = get_desktop_size()
+        # self._width = display_info[0][b"width"]  # type: ignore
+        # self._height = display_info[0][b"height"]  # type: ignore
+        self._display_size = point.Point(display_info[2]) # type: ignore
+        self._camera_dims = point.Point(display_info[0].values()) # type: ignore
+        self._camera_dim_offset = point.Point(display_info[1]) # type: ignore
+        self._tiles_dims = self._camera_dim_offset * 2
+        self._screen_scale = self._tiles_dims / self._camera_dims
+
+        return self._camera_dims, self._camera_dim_offset, self._screen_scale
 
     def act(self, actions):
         return ()

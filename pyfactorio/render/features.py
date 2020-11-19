@@ -421,7 +421,7 @@ class Features(object):
         self._map_size = map_size
 
     @classmethod
-    def unpack_obs(cls, obs):
+    def unpack_obs(cls, obs, dims):
         tick = obs[0][0]  # type: ignore
         xpos = obs[0][1]  # type: ignore
         ypos = obs[0][2]  # type: ignore
@@ -434,7 +434,6 @@ class Features(object):
 
         # # layers
         fm = {
-            "trees": [],
             "iron_ore": [],
             "copper_ore": [],
             "coal": [],
@@ -444,13 +443,12 @@ class Features(object):
             # ("entity_hit_points_ratio",
         }
         tm = []
-
         hm = []
         hmr = []
         et = []
         for (name, ents) in list(entities.items()):
             og_name = name.decode()
-            new_name = og_name.replace("-","_")
+            new_name = og_name.replace("-", "_")
             es = None
 
             track_indivi = False
@@ -462,30 +460,30 @@ class Features(object):
             except KeyError:
                 pass
 
-
             if new_name.find("tree") >= 0:
                 new_name = "trees"
                 is_tree = True
 
             for e in ents:
+                co = point.Point(e[0], e[1])
                 if track_indivi is True:
                     if len(e) > 4:
-                        es.append((e[0], e[1], e[4]))
+                        es.append((co, e[4]))
                     else:
-                        es.append((e[0], e[1], 1))
+                        es.append((co, 1))
 
                 if is_tree is True:
-                    tm.append((e[0], e[1], 1))
+                    tm.append((co, 1))
 
                 if is_tree is False:
                     try:
-                        et.append((e[0], e[1], Entities[og_name]))
+                        et.append((co, Entities[og_name]))
                     except:
                         pass
 
                 if len(e) >= 4:
-                    hm.append((e[0], e[1], e[2]))
-                    hmr.append((e[0], e[1], e[3]))
+                    hm.append((co, e[2]))
+                    hmr.append((co, e[3]))
 
                 # e_xpos = e[0]
                 # e_ypos = e[1]
@@ -494,7 +492,7 @@ class Features(object):
                 # e[4] = custom val
 
             if track_indivi:
-                fm[new_name] = es # type: ignore
+                fm[new_name] = es  # type: ignore
         return [tick, xpos, ypos, fm, tm, hm, hmr]
 
         # self.init_camera(

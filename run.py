@@ -1,3 +1,5 @@
+from pyfactorio.render import transform
+from pyfactorio.render import point
 from pyfactorio.render.features import Feature, Features
 import pygame
 import time
@@ -20,9 +22,21 @@ img = np.zeros((w, h, 3), dtype=np.uint8)
 
 ctrlr = FactorioController()
 ctrlr.start_game()
+dims, (ow, oh), scale = ctrlr.zoom()
 
 init_time = timer()
 frames_displayed = 0
+
+feature_dims = point.Point(480, 360)
+
+world_to_camera = transform.Linear(scale=scale, offset=(ow,oh))
+camera_to_feature = transform.Linear(scale=feature_dims/dims)
+
+chain = transform.Chain(
+    world_to_camera,
+    camera_to_feature,
+    transform.PixelToCoord()
+)
 
 running = True
 while running:
@@ -30,7 +44,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
     obs = ctrlr.observe()
-    fobs = Features.unpack_obs(obs)
+    fobs = Features.unpack_obs(obs, point.Point(ow, oh))
     print(fobs)
 
     # arr = np.array([type=np.float)

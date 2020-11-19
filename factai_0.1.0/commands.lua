@@ -5,12 +5,11 @@ function find_nearby_entities(e, force)
     local radius = 110
     local pos = e.position;
     local px = pos.x
-    local py = pos.y -- I'm just unrolling everything now...
+    local py = pos.y
     local area = {
        {px-radius, py-radius},
        {px+radius, py+radius}}
     return e.surface.find_entities_filtered{area = area, force = {force}}
-    -- return e.surface.find_entities(area)
 end
 
 function get_visible_offsets(e)
@@ -23,7 +22,7 @@ function get_visible_offsets(e)
     local dsr = e.display_resolution
     local w_off = ((60.0*dsr.width) / (2.0*dsc*max_w))
     local h_off = ((32.0*dsr.height) / (2.0*dsc*max_h))
-    return {w_off, h_off}
+    return {w_off, h_off, dsr.width, dsr.height}
 end
 
 function get_visible_bounds(e)
