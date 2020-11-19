@@ -1,4 +1,6 @@
+from pyfactorio.render.features import Feature, Features
 import pygame
+import time
 import numpy as np
 from pygame import surfarray
 
@@ -27,12 +29,14 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-    # updating the image
-    for i in range(100):
-        img[np.random.randint(w),np.random.randint(h)] = np.random.randint(255,size=3,dtype=np.uint8)
+    obs = ctrlr.observe()
+    fobs = Features.unpack_obs(obs)
+    print(fobs)
 
     surfarray.blit_array(display, img)
     pygame.display.flip()
 
     frames_displayed+=1
+
+    interval = 1/30. - time.monotonic() % 1/30.
+    time.sleep(interval)
