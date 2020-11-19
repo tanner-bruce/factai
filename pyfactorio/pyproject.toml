@@ -12,6 +12,7 @@ pygame = "^2.0.0"
 numpy = "^1.19.4"
 black = "^20.8b1"
 rope = "^0.18.0"
+ipykernel = "^5.3.4"
 
 [tool.poetry.dev-dependencies]
 

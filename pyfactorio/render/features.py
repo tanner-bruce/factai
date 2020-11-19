@@ -220,7 +220,7 @@ class ScreenFeatures(
         [
             # "water_map",
             # "cliff_map",
-            "rock_map",
+            # "rock_map",
             "tree_map",
             "iron_map",
             "copper_map",
@@ -430,14 +430,39 @@ class Features(object):
 
         entities = obs[1] # type: ignore
 
+        # layers
+        fm = {
+            "tree_map"
+            "iron_map",
+            "copper_map",
+            "oil_map",
+            "uranium_map",
+            "coal_map",
+            "stone_map",
+            "unit_type",
+            "unit_hit_points",
+            "unit_hit_points_ratio",
+        }
 
         fm = {}
         for k, v in entities:
             es = fm[k]
+            if es is None:
+                es = {}
             e_xpos = v[0]
             e_ypos = v[1]
             e_health = v[2]
             e_hr = v[3]
+
+        return [
+            tick,
+            xpos,
+            ypos,
+            walking,
+            direction,
+            incombat,
+            shooting
+        ]
 
 
 
