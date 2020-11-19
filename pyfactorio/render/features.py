@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+from pyfactorio.api.entities import Entities
 import random
 
 import enum
@@ -230,11 +231,11 @@ class ScreenFeatures(
             "stone_map",
             # "player_id",
             # "items",
-            "unit_type",
+            "entity_type",
             # "powered",
             # "selected",
-            "unit_hit_points",
-            "unit_hit_points_ratio",
+            "entity_hit_points",
+            "entity_hit_points_ratio",
             # "buildable",
             # "mineable"
         ],
@@ -265,7 +266,7 @@ class ScreenFeatures(
 SCREEN_FEATURES = ScreenFeatures(
     # water_map=(2, FeatureType.CATEGORICAL, colors.blue, False),
     # cliff_map=(2, FeatureType.CATEGORICAL, colors.red * 0.8, False),
-    rock_map=(2, FeatureType.CATEGORICAL, colors.black, False),
+    # rock_map=(2, FeatureType.CATEGORICAL, colors.black, False),
     tree_map=(2, FeatureType.CATEGORICAL, colors.green, False),
     iron_map=(256, FeatureType.SCALAR, colors.hot, False),
     copper_map=(256, FeatureType.SCALAR, colors.hot, False),
@@ -276,7 +277,7 @@ SCREEN_FEATURES = ScreenFeatures(
     # player_id=(17, FeatureType.CATEGORICAL, colors.PLAYER_ABSOLUTE_PALETTE, False),
     # items=(max(static_data.ITEMS) + 1, FeatureType.CATEGORICAL, colors.items, False),
     entity_type=(
-        max(static_data.UNIT_TYPES) + 1,
+        len(Entities) + 1,
         FeatureType.CATEGORICAL,
         colors.yellow,
         False,
@@ -419,7 +420,7 @@ class Features(object):
         self._map_size = map_size
 
     @classmethod
-    def unpack_obs(obs):
+    def unpack_obs(cls, obs):
         tick = obs[0][0] # type: ignore
         xpos = obs[0][1] # type: ignore
         ypos = obs[0][2] # type: ignore
@@ -430,7 +431,7 @@ class Features(object):
 
         entities = obs[1] # type: ignore
 
-        # layers
+        # # layers
         fm = {
             "tree_map"
             "iron_map",
@@ -444,15 +445,17 @@ class Features(object):
             "unit_hit_points_ratio",
         }
 
+
         fm = {}
-        for k, v in entities:
-            es = fm[k]
+        for name, ents in entities:
+            es = fm[name]
             if es is None:
                 es = {}
-            e_xpos = v[0]
-            e_ypos = v[1]
-            e_health = v[2]
-            e_hr = v[3]
+            for e in ents:
+                e_xpos = e[0]
+                e_ypos = e[1]
+                e_health = e[2]
+                e_hr = e[3]
 
         return [
             tick,

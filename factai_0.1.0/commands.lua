@@ -31,8 +31,8 @@ function get_visible_bounds(e)
     local w_off = offs[1]
     local h_off = offs[2]
     return {
-       {px-w_off, py-h_off},
-       {px+w_off, py+h_off}}
+       {e.position.x-w_off, e.position.y-h_off},
+       {e.position.x+w_off, e.position.y+h_off}}
 end
 
 function find_visible_entities(e, force)
@@ -65,13 +65,15 @@ function commands.on_tick(event)
     -- local aqbs = p.get_active_quick_bar_page
 end
 
-function commands.observe(parameter)
+function commands.step(parameter)
     -- game.tick_paused = true
     -- if game.ticks_to_run - parameter.parameter > 0 then
     --     return m.pack("ip")
     -- end
     -- game.ticks_to_run = parameter.parameter
-    
+end
+
+function commands.observe(parameter)
     local p = game.players[1]
     if not p then return end
     local pos = p.position
@@ -106,13 +108,22 @@ function commands.observe(parameter)
 
     --
 
-    local player_feature_vec = {
-        parameter.tick,pos.x,pos.y,ws.walking_state,ws.direction,ic,ss
-    }
+    local player_feature_vec = {}
+    table.insert(player_feature_vec, parameter.tick)
+    table.insert(player_feature_vec, pos.x)
+    table.insert(player_feature_vec, pos.y)
+    table.insert(player_feature_vec, ws.walking_state or false)
+    table.insert(player_feature_vec, ws.direction)
+    table.insert(player_feature_vec, ic)
+    table.insert(player_feature_vec, ss)
+
     entities = {}
     for i, ent in ipairs(find_visible_entities(p)) do
         el = entities[ent.name] or {}
-        table.insert(el, {ent.position.x, ent.position.y, ent.health, ent.get_health_ratio()})
+        table.insert(el, {
+            ent.position.x, ent.position.y,
+            ent.health, ent.get_health_ratio()
+        })
         entities[ent.name] = el
     end
 
@@ -121,9 +132,7 @@ function commands.observe(parameter)
         entities
     }
 
-    output = m.pack(out)
     rcon.print(m.pack(out))
-    game.print(m.unpack(output))
 end
 
 function commands.enqueue(parameter)
