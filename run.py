@@ -1,58 +1,73 @@
+from pyfactorio.render.game import ActionCmd
 from pyfactorio.render import transform
 from pyfactorio.render import point
+from pyfactorio.render import game
 from pyfactorio.render.features import Feature, Features
 import pygame
 import time
 import numpy as np
 from pygame import surfarray
+import signal
 
 from pyfactorio.env.controller import FactorioController
 
 from timeit import default_timer as timer
 
-pygame.init()
-
-w = 1000
-h = 800
-
-display = pygame.display.set_mode((w, h))
-
-img = np.zeros((w, h, 3), dtype=np.uint8)
-
 
 ctrlr = FactorioController()
 ctrlr.start_game()
-dims, (ow, oh), scale = ctrlr.zoom()
+di = ctrlr.zoom()
 
 init_time = timer()
-frames_displayed = 0
+feature_dims = di.camera_world_space_dims
 
-feature_dims = point.Point(480, 360)
 
-world_to_camera = transform.Linear(scale=scale, offset=(ow,oh))
-camera_to_feature = transform.Linear(scale=feature_dims/dims)
+g = game.RendererHuman()
+g.init(None, di)
+# g.init_window(di=di)
 
-chain = transform.Chain(
-    world_to_camera,
-    camera_to_feature,
-    transform.PixelToCoord()
-)
+
 
 running = True
+def qu():
+    running = False
+signal.signal(signal.SIGINT, qu)
+
 while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    # for event in pygame.event.get():
+    #     if event.type == pygame.QUIT:
+    #         running = False
     obs = ctrlr.observe()
-    fobs = Features.unpack_obs(obs, point.Point(ow, oh))
-    print(fobs)
+    fobs = Features.unpack_obs(obs)
+    # print(fobs)
+
+    g.render(fobs)
+
+    act = g.get_actions(ctrlr)
+    if act == ActionCmd.QUIT:
+        running = False
+
+    # player_pos = point.Point(fobs[1], fobs[2])
+
+
+    # # (78.5, 33.5) -> (0, 0)
+    # normalize_to_origin = transform.Linear(offset=player_pos-di.camera_tl_player_offset_dims)
+
+    # # 0 - 114
+    # # -> 
+    # # 0 - width_of_surface
+    # camera_to_feature = transform.Linear(scale=di.screen_dims/di.camera_world_space_dims)
+
+
+    # chain = transform.Chain(
+    #     normalize_to_origin,
+    #     camera_to_feature,
+    #     transform.PixelToCoord()
+    # )
+
 
     # arr = np.array([type=np.float)
 
-    surfarray.blit_array(display, img)
-    pygame.display.flip()
+    # surfarray.blit_array(display, img) pygame.display.flip()
 
-    frames_displayed += 1
-
-    interval = 1 / 30.0 - time.monotonic() % 1 / 30.0
-    time.sleep(interval)
+    interval = 1 / 60.0 - time.monotonic() % 1 / 60.0

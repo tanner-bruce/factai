@@ -24,7 +24,7 @@ import itertools
 import math
 import os
 import platform
-from pyfactorio.env.controller import FactorioController
+from pyfactorio.env.controller import DisplayInfo, FactorioController
 from pyfactorio.util import get_desktop_size
 import threading
 import time
@@ -96,7 +96,9 @@ class ActionCmd(enum.Enum):
 class _Surface(object):
     """A surface to display on screen."""
 
-    def __init__(self, surf, surf_type, surf_rect, world_to_surf, draw):
+    def __init__(
+        self, surf, surf_type, surf_rect, world_to_surf, di: DisplayInfo, draw
+    ):
         """A surface to display on screen.
 
         Args:
@@ -109,10 +111,21 @@ class _Surface(object):
         self.surf = surf
         self.surf_type = surf_type
         self.surf_rect = surf_rect
-        self.world_to_surf = world_to_surf
+        self.world_to_surf = None
+        self.translate = None
+        self.player_to_surf = world_to_surf
         self.draw = draw
+        self.origin: point.Point = None
+        self.di = di
 
-    def draw_line(self, color, start_loc, end_loc, thickness=1):
+    def set_pos(self, pos: point.Point):
+        self.origin = pos
+        self.translate = transform.Linear(
+            offset=self.di.camera_tl_player_offset_dims - pos
+        )
+        self.world_to_surf = transform.Chain(self.translate, self.player_to_surf)
+
+    def draw_line(self, color, start_loc, end_loc, thickness: int = 1):
         """Draw a line using world coordinates and thickness."""
         pygame.draw.line(
             self.surf,
@@ -183,7 +196,6 @@ class _Surface(object):
         self.surf.blit(text_surf, rect)
 
 
-
 def circle_mask(shape, pt, radius):
     # ogrid is confusing but seems to be the best way to generate a circle mask.
     # http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html
@@ -249,7 +261,6 @@ class RendererHuman(object):
         render_sync=False,
         render_feature_grid=True,
         video=None,
-        view_width=100.0,
     ):
         """Create a renderer for use by humans.
 
@@ -284,8 +295,8 @@ class RendererHuman(object):
         self._last_time = time.time()
         self._last_game_loop = 0
         self._name_lengths = {}
-        self._feature_screen_px = point.Point(1280, 720)
-        self._feature_camera_width_world_units = view_width
+        self._feature_screen_px: point.Point = None
+        self._obs: features.Observation = None
 
     def close(self):
         if self._obs_queue:
@@ -294,7 +305,7 @@ class RendererHuman(object):
             self._obs_queue = None
             self._render_thread = None
 
-    def init(self, game_info, static_data=None):
+    def init(self, game_info, di):
         """Take the game info and the static data needed to set up the game.
 
         This must be called before render or get_actions for each game or restart.
@@ -307,10 +318,10 @@ class RendererHuman(object):
           ValueError: if there is nothing to render.
         """
         self._game_info = game_info
-        self._static_data = static_data
+        self._di = di
         # self._map_size = point.Point.build(game_info.map_size)
         try:
-            self.init_window()
+            self.init_window(di)
             self._initialized = True
         except pygame.error as e:
             self._initialized = False
@@ -330,7 +341,7 @@ class RendererHuman(object):
 
     @with_lock(render_lock)
     @sw.decorate
-    def init_window(self):
+    def init_window(self, di: DisplayInfo):
         """Initialize the pygame window and lay out the surfaces."""
         if platform.system() == "Windows":
             # Enable DPI awareness on Windows to give the correct window size.
@@ -338,7 +349,11 @@ class RendererHuman(object):
 
         pygame.init()
 
-        main_screen_px = self._feature_screen_px
+        main_screen_px = di.camera_world_space_dims
+        self._feature_screen_px = di.camera_world_space_dims
+
+        feature_cols = 0
+        feature_rows = 0
 
         window_size_ratio = main_screen_px
         num_feature_layers = 9
@@ -367,13 +382,11 @@ class RendererHuman(object):
         # The sub-surfaces that the various draw functions will draw to.
         self._surfaces = []
 
-        def add_surface(surf_type, surf_loc, world_to_surf, draw_fn):
+        def add_surface(surf_type, surf_loc, world_to_surf, di: DisplayInfo, draw_fn):
             """Add a surface. Drawn in order and intersect in reverse order."""
             sub_surf = self._window.subsurface(pygame.Rect(surf_loc.tl, surf_loc.size))
             self._surfaces.append(
-                _Surface(
-                    sub_surf, surf_type, surf_loc, world_to_surf, draw_fn
-                )
+                _Surface(sub_surf, surf_type, surf_loc, world_to_surf, di, draw_fn)
             )
 
         self._scale = window_size_px.y // 32
@@ -382,37 +395,6 @@ class RendererHuman(object):
 
         # Renderable space for the screen.
         screen_size_px = main_screen_px.scale_max_size(window_size_px)
-
-        # feature_screen_to_main_screen = transform.Linear(
-        #     screen_size_px / self._feature_screen_px)
-
-        # World has origin at bl, world_tl has origin at tl.
-        # self._world_to_world_tl = transform.Linear(
-        #     point.Point(1, -1), point.Point(0, self._map_size.y)
-        # )
-
-        # # Move the point to be relative to the camera. This gets updated per frame.
-        # self._world_tl_to_world_camera_rel = transform.Linear(
-        #     offset=-self._map_size / 4
-        # )
-
-        # # Feature layer locations in continuous space.
-        # feature_world_per_pixel = (
-        #     self._feature_screen_px / self._feature_camera_width_world_units
-        # )
-        # world_camera_rel_to_feature_screen = transform.Linear(
-        #     feature_world_per_pixel, self._feature_screen_px / 2
-        # )
-
-        # self._world_to_feature_screen = transform.Chain(
-        #     self._world_to_world_tl,
-        #     self._world_tl_to_world_camera_rel,
-        #     world_camera_rel_to_feature_screen,
-        # )
-
-        # self._world_to_feature_screen_px = transform.Chain(
-        #     self._world_to_feature_screen, transform.PixelToCoord()
-        # )
 
         # add_surface(SurfType.FEATURE | SurfType.SCREEN,
         #             point.Rect(point.origin, screen_size_px),
@@ -464,6 +446,7 @@ class RendererHuman(object):
                     surf_type,
                     point.Rect(surf_loc, surf_loc + feature_layer_size).round(),
                     world_to_surf,
+                    di,
                     fn,
                 )
 
@@ -476,17 +459,28 @@ class RendererHuman(object):
                 )
 
             feature_screen_to_feature_screen_surf = transform.Linear(
-                feature_layer_size / self._feature_screen_px)
-            world_to_feature_screen_surf = transform.Chain(
-                self._world_to_feature_screen,
-                feature_screen_to_feature_screen_surf)
+                feature_layer_size / self._feature_screen_px
+            )
+
+            # (78.5, 33.5) -> (0, 0)
+            # normalize_to_origin = transform.Linear(offset=player_pos-di.camera_tl_player_offset_dims)
+
+            # 0 - 114
+            # ->
+            # 0 - width_of_surface
+            camera_to_feature = transform.Linear(
+                scale=di.screen_dims / di.camera_world_space_dims
+            )
+
+            chain = transform.Chain(
+                # normalize_to_origin,
+                camera_to_feature,
+                feature_screen_to_feature_screen_surf,
+                transform.PixelToCoord(),
+            )
 
             for feature in features.SCREEN_FEATURES:
-                add_feature_layer(
-                    feature,
-                    SurfType.FEATURE | SurfType.SCREEN,
-                    world_to_surf
-                )
+                add_feature_layer(feature, SurfType.FEATURE | SurfType.SCREEN, chain)
 
     @sw.decorate
     def get_actions(self, controller: FactorioController):
@@ -537,19 +531,32 @@ class RendererHuman(object):
         return ActionCmd.STEP
 
     @sw.decorate
-    def draw_feature_layer(self, surf, feature):
+    def draw_feature_layer(self, surf: _Surface, feature):
         """Draw a feature layer."""
-        layer = feature.unpack(self._obs.observation)
-        if layer is not None:
-            surf.blit_np_array(feature.color(layer))
-        else:
-            surf.surf.fill(colors.black)
+        layer = None
+        surf.surf.fill(colors.black)
+        try:
+            layer = self._obs.features[
+                feature.name
+            ]  # feature.unpack(self._obs.observation)
+            if len(layer) == 0:
+                return
+        except:
+            return 
+        surf.set_pos(point.Point(self._obs.player_x, self._obs.player_y))
+
+        for (k, v) in layer:
+            surf.draw_circle(colors.red, k, 1, 1)
+
+        # if layer is not None:
+        # surf.blit_np_array(feature.color(layer))
+        # else:
+        # surf.surf.fill(colors.black)
 
     def all_surfs(self, fn, *args, **kwargs):
         for surf in self._surfaces:
             if surf.world_to_surf:
                 fn(surf, *args, **kwargs)
-
 
     def render_thread(self):
         """A render loop that pulls observations off the queue to render."""
@@ -576,18 +583,11 @@ class RendererHuman(object):
         if not self._initialized:
             return
         now = time.time()
-        self._game_times.append(
-            (
-                now - self._last_time,
-                max(1, obs.observation.game_loop - self._obs.observation.game_loop),
-            )
-        )
         self._last_time = now
-        self._last_game_loop = self._obs.observation.game_loop
+        # self._last_game_loop = self._obs.observation.game_loop
         self._obs_queue.put(obs)
         if self._render_sync:
             self._obs_queue.join()
-
 
     @with_lock(render_lock)
     @sw.decorate

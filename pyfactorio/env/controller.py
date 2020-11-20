@@ -1,3 +1,4 @@
+from collections import namedtuple
 import logging
 from pyfactorio.render import point
 import subprocess
@@ -7,6 +8,12 @@ from threading import Thread
 from pyfactorio.util import get_desktop_size
 from pyfactorio.api.rcon import rcon
 
+DisplayInfo = namedtuple("DisplayInfo", [
+    "screen_dims",
+    # "screen_scale",
+    "camera_tl_player_offset_dims",
+    "camera_world_space_dims"
+    ])
 
 class FactorioController:
     def __init__(self, addr="127.0.0.1", password="pass", port=9889):
@@ -17,7 +24,7 @@ class FactorioController:
         self._rcon = None
         self._proc = None
 
-    def quit(self):
+    def quit(self) -> None:
         if self._proc is not None:
             self._proc.terminate()
             self._proc = None
@@ -25,26 +32,31 @@ class FactorioController:
             self._rcon.disconnect()
             self._rcon = None
 
-    def restart(self):
+    def restart(self) -> None:
         self._proc.terminate()
         self.start_game()
 
-    def zoom(self, zoom=0.7):
+    def zoom(self, zoom: float=0.7) -> DisplayInfo:
         return self._do_zoom(zoom)
 
-    def _do_zoom(self, zoom):
+    def _do_zoom(self, zoom: float) -> DisplayInfo:
         display_info = self._rcon.command("/zoom %f" % zoom)
         self._zoom = zoom
-        # self._desktop_size = get_desktop_size()
-        # self._width = display_info[0][b"width"]  # type: ignore
-        # self._height = display_info[0][b"height"]  # type: ignore
-        self._display_size = point.Point(display_info[2]) # type: ignore
-        self._camera_dims = point.Point(display_info[0].values()) # type: ignore
-        self._camera_dim_offset = point.Point(display_info[1]) # type: ignore
-        self._tiles_dims = self._camera_dim_offset * 2
-        self._screen_scale = self._tiles_dims / self._camera_dims
+        print(display_info)
+        self._display_size = point.Point(display_info[0][b'width'], display_info[0][b'height']) # type: ignore
+        self._camera_dim_offset = point.Point(display_info[1][0], display_info[1][1]) # type: ignore
+        self._camera_dims = self._camera_dim_offset * 2 # type: ignore
+        # self._screen_scale = self._tiles_dims / self._camera_dims
+        self._di = DisplayInfo(
+            screen_dims=self._camera_dims,
+            # screen_scale=self._screen_scale, 
+            camera_tl_player_offset_dims=self._camera_dim_offset,
+            camera_world_space_dims=self._camera_dim_offset*2
+            )
+        return self._di
 
-        return self._camera_dims, self._camera_dim_offset, self._screen_scale
+    def display_info(self) -> DisplayInfo:
+        return self._di
 
     def act(self, actions):
         return ()
@@ -54,9 +66,6 @@ class FactorioController:
 
     def observe(self, count=1):
         return self._rcon.command("/observe %d" % count)
-
-    def game_info(self):
-        return ()
 
     def start_game(self):
         self._thread = Thread(target=self._start_process)

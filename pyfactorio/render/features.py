@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+from collections import namedtuple
 import pyfactorio
 from pyfactorio.api.entities import Entities, Trees
 import random
@@ -188,6 +189,13 @@ class FeatureUnit(enum.IntEnum):
     selected = (17,)
 
 
+Observation = namedtuple("Observation", [
+    "tick",
+    "player_x",
+    "player_y",
+    "features",
+])
+
 class Feature(
     collections.namedtuple(
         "Feature",
@@ -235,8 +243,8 @@ class ScreenFeatures(
             "entity_type",
             # "powered",
             # "selected",
-            "entity_hit_points",
-            "entity_hit_points_ratio",
+            "entity_health_map",
+            "entity_health_ratio_map",
             # "buildable",
             # "mineable"
         ],
@@ -285,8 +293,8 @@ SCREEN_FEATURES = ScreenFeatures(
     ),
     # powered=(2, FeatureType.CATEGORICAL, colors.hot, False),
     # selected=(2, FeatureType.CATEGORICAL, colors.SELECTED_PALETTE, False),
-    entity_hit_points=(350, FeatureType.SCALAR, colors.hot, True),
-    entity_hit_points_ratio=(256, FeatureType.SCALAR, colors.hot, False),
+    entity_health_map=(350, FeatureType.SCALAR, colors.hot, True),
+    entity_health_ratio_map=(256, FeatureType.SCALAR, colors.hot, False),
     # buildable=(2, FeatureType.CATEGORICAL, colors.winter, False),
     # mineable=(2, FeatureType.CATEGORICAL, colors.winter, False)
 )
@@ -417,11 +425,10 @@ class Dimensions(object):
 
 class Features(object):
     def __init__(self, map_size=None):
-        print("init")
         self._map_size = map_size
 
     @classmethod
-    def unpack_obs(cls, obs, dims):
+    def unpack_obs(cls, obs):
         tick = obs[0][0]  # type: ignore
         xpos = obs[0][1]  # type: ignore
         ypos = obs[0][2]  # type: ignore
@@ -493,49 +500,8 @@ class Features(object):
 
             if track_indivi:
                 fm[new_name] = es  # type: ignore
-        return [tick, xpos, ypos, fm, tm, hm, hmr]
 
-        # self.init_camera(
-        #     aif.feature_dimensions,
-        #     map_size,
-        #     aif.camera_width_world_units,
-        #     aif.raw_resolution,
-        # )
-
-        # self._valid_functions = _init_valid_functions(aif.action_dimensions)
-
-    # def init_camera(self, feature_dimensions, camera_width_world_units, raw_resolution):
-    #     """Initialize the camera (especially for feature_units).
-    #     This is called in the constructor and may be called repeatedly after
-    #     `Features` is constructed, since it deals with rescaling coordinates and not
-    #     changing environment/action specs.
-    #     Args:
-    #     feature_dimensions: See the documentation in `AgentInterfaceFormat`.
-    #     map_size: The size of the map in world units.
-    #     camera_width_world_units: See the documentation in `AgentInterfaceFormat`.
-    #     raw_resolution: See the documentation in `AgentInterfaceFormat`.
-    #     Raises:
-    #     ValueError: If map_size or camera_width_world_units are falsey (which
-    #         should mainly happen if called by the constructor).
-    #     """
-    #     map_size = point.Point.build(map_size)
-    #     self._world_to_world_tl = transform.Linear(
-    #         point.Point(1, -1), point.Point(0, map_size.y)
-    #     )
-    #     self._world_tl_to_world_camera_rel = transform.Linear(offset=-map_size / 4)
-
-    #     world_camera_rel_to_feature_screen = transform.Linear(
-    #         feature_dimensions.screen / camera_width_world_units,
-    #         feature_dimensions.screen / 2,
-    #     )
-    #     self._world_to_feature_screen_px = transform.Chain(
-    #         self._world_to_world_tl,
-    #         self._world_tl_to_world_camera_rel,
-    #         world_camera_rel_to_feature_screen,
-    #         transform.PixelToCoord(),
-    #     )
-
-    #     # If we don't have a specified raw resolution, we do no transform.
-    #     world_tl_to_feature_minimap = transform.Linear(
-    #         scale=raw_resolution / map_size.max_dim() if raw_resolution else None
-    #     )
+        fm["tree_map"] = tm
+        fm["entity_health_map"] = hm
+        fm["entity_health_ratio_map"] = hmr
+        return Observation(tick=tick, player_x=xpos, player_y=ypos, features = fm)
