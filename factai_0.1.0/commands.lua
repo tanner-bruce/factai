@@ -22,7 +22,7 @@ function get_visible_offsets(e)
     local dsr = e.display_resolution
     local w_off = ((60.0*dsr.width) / (2.0*dsc*max_w))
     local h_off = ((32.0*dsr.height) / (2.0*dsc*max_h))
-    return {w_off, h_off, dsr.width, dsr.height}
+    return {w_off, h_off}
 end
 
 function get_visible_bounds(e)
@@ -42,26 +42,6 @@ end
 function commands.on_tick(event)
     local p = game.players[1]
     if not p then end
-    local pos = p.position
-    local ws = p.walking_state
-    local rds = p.riding_state
-    local ms = p.mining_state
-    local ss = p.shooting_state
-    local ps = p.picking_state
-    local rs = p.repair_state
-    local cs = p.cursor_stack
-    local cg = p.cursor_ghost
-    local ic = p.in_combat
-    -- local ent = p.character
-    -- local health = ent.get_health_ratio()
-    -- local kills = ent.kills
-    -- local sel = p.selected
-    -- local effects = ent.effects
-    -- local cmp = p.character_mining_progress
-    -- local cq = p.crafting_queue
-
-    -- local last_dmg = ent.tick_of_last_damage
-    -- local aqbs = p.get_active_quick_bar_page
 end
 
 function commands.step(parameter)
