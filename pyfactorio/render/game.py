@@ -24,6 +24,7 @@ import itertools
 import math
 import os
 import platform
+from pyfactorio.render.point import Rect
 from pyfactorio.env.controller import DisplayInfo, FactorioController
 from pyfactorio.util import get_desktop_size
 import threading
@@ -160,12 +161,16 @@ class _Surface(object):
                 self.surf, color, center, radius, thickness if thickness < radius else 0
             )
 
-    def draw_rect(self, color, world_rect, thickness=0):
+    def draw_rect_pts(self, color, tl, br, thickness=0):
         """Draw a rectangle using world coordinates."""
-        tl = self.world_to_surf.fwd_pt(world_rect.tl).round()
-        br = self.world_to_surf.fwd_pt(world_rect.br).round()
+        tl = self.world_to_surf.fwd_pt(tl).round()
+        br = self.world_to_surf.fwd_pt(br).round()
         rect = pygame.Rect(tl, br - tl)
         pygame.draw.rect(self.surf, color, rect, thickness)
+
+    def draw_rect(self, color, world_rect, thickness=0):
+        """Draw a rectangle using world coordinates."""
+        self.draw_rect_pts(color, world_rect.tl, world_rect.br, thickness)
 
     def blit_np_array(self, array):
         """Fill this surface using the contents of a numpy array."""
@@ -542,11 +547,12 @@ class RendererHuman(object):
             if len(layer) == 0:
                 return
         except:
-            return 
+            return
         surf.set_pos(point.Point(self._obs.player_x, self._obs.player_y))
 
         for (k, v) in layer:
-            surf.draw_circle(colors.red, k, 1, 1)
+            surf.draw_rect_pts(colors.red, k, k + 1, 3)
+            # surf.draw_circle(colors.red, k, 1, 1)
 
         # if layer is not None:
         # surf.blit_np_array(feature.color(layer))
@@ -563,6 +569,8 @@ class RendererHuman(object):
         obs = True
         while obs:  # Send something falsy through the queue to shut down.
             obs = self._obs_queue.get()
+            if obs is None:
+                return
             if obs:
                 # for alert in obs.observation.alerts:
                 # self._alerts[sc_pb.Alert.Name(alert)] = time.time()

@@ -29,8 +29,10 @@ g.init(None, di)
 
 
 running = True
-def qu():
+def qu(a, b):
+    global running
     running = False
+    g.close()
 signal.signal(signal.SIGINT, qu)
 
 while running:

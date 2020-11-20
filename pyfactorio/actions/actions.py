@@ -25,62 +25,6 @@ import numpy
 import six
 from pyfactorio.render import point
 
-
-class ActionSpace(enum.Enum):
-  FEATURES = 1  # Act in feature layer pixel space with FUNCTIONS below.
-  RGB = 2       # Act in RGB pixel space with FUNCTIONS below.
-  RAW = 3       # Act with unit tags with RAW_FUNCTIONS below.
-
-
-def spatial(action):
-  """Choose the action space for the action proto."""
-  return action.action_feature_layer
-
-
-def move(action, action_space, minimap):
-  """Move the camera."""
-  minimap.assign_to(spatial(action, action_space).camera_move.center_minimap)
-
-
-def select_entity(action, action_space, select_unit_act, select_unit_id):
-  """Select a specific unit from the multi-unit selection."""
-  del action_space
-  select = action.action_ui.multi_panel
-  select.type = select_unit_act
-  select.unit_index = select_unit_id
-
-def unload(action, action_space, unload_id):
-  """Unload a unit from a transport/bunker/nydus/etc."""
-  del action_space
-  action.action_ui.cargo_panel.unit_index = unload_id
-
-
-def build_queue(action, action_space, build_queue_id):
-  """Cancel a unit in the build queue."""
-  del action_space
-  action.action_ui.production_panel.unit_index = build_queue_id
-
-
-def raw_cmd(action, ability_id, queued, unit_tags):
-  """Do a raw command to another entity."""
-  action_cmd = action.action_raw.unit_command
-  action_cmd.ability_id = ability_id
-  action_cmd.queue_command = queued
-  if not isinstance(unit_tags, (tuple, list)):
-    unit_tags = [unit_tags]
-  action_cmd.unit_tags.extend(unit_tags)
-
-
-def raw_cmd_pt(action, ability_id, queued, unit_tags, world):
-  """Do a raw command to another unit towards a point."""
-  action_cmd = action.action_raw.unit_command
-  action_cmd.ability_id = ability_id
-  action_cmd.queue_command = queued
-  if not isinstance(unit_tags, (tuple, list)):
-    unit_tags = [unit_tags]
-  action_cmd.unit_tags.extend(unit_tags)
-  world.assign_to(action_cmd.target_world_space_pos)
-
 def numpy_to_python(val):
   """Convert numpy types to their corresponding python types."""
   if isinstance(val, (int, float)):
@@ -155,9 +99,8 @@ class ArgumentType(collections.namedtuple(
 
 
 class Arguments(collections.namedtuple("Arguments", [
-    "screen", "minimap", "screen2", "queued", "control_group_act",
-    "control_group_id", "select_point_act", "select_add", "select_unit_act",
-    "select_unit_id", "select_worker", "build_queue_id", "unload_id"])):
+    "screen", 
+    ])):
   """The full list of argument types.
   Take a look at TYPES and FUNCTION_TYPES for more details.
   Attributes:
@@ -191,7 +134,8 @@ class Arguments(collections.namedtuple("Arguments", [
 
 
 class RawArguments(collections.namedtuple("RawArguments", [
-    "world", "queued", "unit_tags", "target_unit_tag"])):
+    "world", 
+    ])):
   """The full list of argument types.
   Take a look at TYPES and FUNCTION_TYPES for more details.
   Attributes:
@@ -239,62 +183,73 @@ SELECT_UNIT_ACT_OPTIONS = [
 SelectUnitAct = _define_position_based_enum(  # pylint: disable=invalid-name
     "SelectUnitAct", SELECT_UNIT_ACT_OPTIONS)
 
+WALKING_DIRECTION_OPTIONS = [
+    ("north", 0)
+    ("northeast", 1)
+    ("east", 2)
+    ("southeast", 3)
+    ("south", 4)
+    ("southwest", 5)
+    ("west", 6)
+    ("northwest", 7)
+]
+WalkAct = _define_position_based_enum(  # pylint: disable=invalid-name
+    "WalkingStateAct", WALKING_DIRECTION_OPTIONS)
+
 # The list of known types.
 TYPES = Arguments.types(
-    screen=ArgumentType.point(),
+    walking_direction=ArgumentType.scalar(9),
+    walking_state=ArgumentType.scalar(1)
     # minimap=ArgumentType.point(),
-    queued=ArgumentType.enum(QUEUED_OPTIONS, Queued),
-    select_point_act=ArgumentType.enum(
-        SELECT_POINT_ACT_OPTIONS, SelectPointAct),
-    select_add=ArgumentType.enum(SELECT_ADD_OPTIONS, SelectAdd),
-    select_unit_act=ArgumentType.enum(SELECT_UNIT_ACT_OPTIONS, SelectUnitAct),
-    select_unit_id=ArgumentType.scalar(500),  # Depends on current selection.
+    # queued=ArgumentType.enum(QUEUED_OPTIONS, Queued),
+    # select_point_act=ArgumentType.enum(
+    #     SELECT_POINT_ACT_OPTIONS, SelectPointAct),
+    # select_add=ArgumentType.enum(SELECT_ADD_OPTIONS, SelectAdd),
+    # select_unit_act=ArgumentType.enum(SELECT_UNIT_ACT_OPTIONS, SelectUnitAct),
+    # select_unit_id=ArgumentType.scalar(500),  # Depends on current selection.
 )
 
 RAW_TYPES = RawArguments.types(
     world=ArgumentType.point(),
-    queued=ArgumentType.enum(QUEUED_OPTIONS, Queued),
-    unit_tags=ArgumentType.unit_tags(512, 512),
-    target_unit_tag=ArgumentType.unit_tags(1, 512),
+    # queued=ArgumentType.enum(QUEUED_OPTIONS, Queued),
+    # unit_tags=ArgumentType.unit_tags(512, 512),
+    # target_unit_tag=ArgumentType.unit_tags(1, 512),
 )
 
 
 # Which argument types do each function need?
 FUNCTION_TYPES = {
     no_op: [],
-    move_camera: [TYPES.minimap],
-    select_point: [TYPES.select_point_act, TYPES.screen],
-    cmd_screen: [TYPES.queued, TYPES.screen],
-    cmd_minimap: [TYPES.queued, TYPES.minimap],
-    raw_no_op: [],
-    raw_cmd: [RAW_TYPES.queued, RAW_TYPES.unit_tags],
-    raw_cmd_pt: [RAW_TYPES.queued, RAW_TYPES.unit_tags, RAW_TYPES.world],
-    raw_cmd_unit: [RAW_TYPES.queued, RAW_TYPES.unit_tags,
-                   RAW_TYPES.target_unit_tag],
-    raw_move_camera: [RAW_TYPES.world],
-    raw_autocast: [RAW_TYPES.unit_tags],
+    move: [TYPES.direction],
+    # select_point: [TYPES.select_point_act, TYPES.screen],
+    # cmd_screen: [TYPES.queued, TYPES.screen],
+    # cmd_minimap: [TYPES.queued, TYPES.minimap],
+    # raw_no_op: [],
+    # raw_cmd: [RAW_TYPES.queued, RAW_TYPES.unit_tags],
+    # raw_cmd_pt: [RAW_TYPES.queued, RAW_TYPES.unit_tags, RAW_TYPES.world],
+    # raw_cmd_unit: [RAW_TYPES.queued, RAW_TYPES.unit_tags,
+    #                RAW_TYPES.target_unit_tag],
+    # raw_move_camera: [RAW_TYPES.world],
+    # raw_autocast: [RAW_TYPES.unit_tags],
 }
-
-# Which ones need an ability?
-ABILITY_FUNCTIONS = {cmd_quick, cmd_screen, cmd_minimap, autocast}
-RAW_ABILITY_FUNCTIONS = {raw_cmd, raw_cmd_pt, raw_cmd_unit, raw_autocast}
-
-# Which ones require a point?
-POINT_REQUIRED_FUNCS = {
-    False: {cmd_quick, autocast},
-    True: {cmd_screen, cmd_minimap, autocast}}
 
 always = lambda _: True
 
 
 class Function(collections.namedtuple(
-    "Function", ["id", "name", "ability_id", "general_id", "function_type",
-                 "args", "avail_fn", "raw"])):
+    "Function", [
+      "id",
+      "name",
+      "general_id",
+      "function_type",
+      "args",
+      "avail_fn",
+      "raw"
+      ])):
   """Represents a function action.
   Attributes:
     id: The function id, which is what the agent will use.
     name: The name of the function. Should be unique.
-    ability_id: The ability id to pass to sc2.
     general_id: 0 for normal abilities, and the ability_id of another ability if
         it can be represented by a more general action.
     function_type: One of the functions in FUNCTION_TYPES for how to construct
@@ -305,33 +260,6 @@ class Function(collections.namedtuple(
     raw: Whether the function is raw or not.
   """
   __slots__ = ()
-
-  @classmethod
-  def ui_func(cls, id_, name, function_type, avail_fn=always):
-    """Define a function representing a ui action."""
-    return cls(id_, name, 0, 0, function_type, FUNCTION_TYPES[function_type],
-               avail_fn, False)
-
-  @classmethod
-  def ability(cls, id_, name, function_type, ability_id, general_id=0):
-    """Define a function represented as a game ability."""
-    assert function_type in ABILITY_FUNCTIONS
-    return cls(id_, name, ability_id, general_id, function_type,
-               FUNCTION_TYPES[function_type], None, False)
-
-  @classmethod
-  def raw_ability(cls, id_, name, function_type, ability_id, general_id=0,
-                  avail_fn=always):
-    """Define a function represented as a game ability."""
-    assert function_type in RAW_ABILITY_FUNCTIONS
-    return cls(id_, name, ability_id, general_id, function_type,
-               FUNCTION_TYPES[function_type], avail_fn, True)
-
-  @classmethod
-  def raw_ui_func(cls, id_, name, function_type, avail_fn=always):
-    """Define a function representing a ui action."""
-    return cls(id_, name, 0, 0, function_type, FUNCTION_TYPES[function_type],
-               avail_fn, True)
 
   @classmethod
   def spec(cls, id_, name, args):
@@ -397,48 +325,18 @@ class Functions(object):
     return self._func_list == other._func_list  # pylint: disable=protected-access
 
 
+def no_op():
+  pass
+
+def cmd_move():
+  pass
+
 # The semantic meaning of these actions can mainly be found by searching:
 # http://liquipedia.net/starcraft2/ or http://starcraft.wikia.com/ .
 # pylint: disable=line-too-long
 _FUNCTIONS = [
     Function.ui_func(0, "no_op", no_op),
-    Function.ui_func(1, "move_camera", move_camera),
-    Function.ui_func(2, "select_point", select_point),
-    Function.ui_func(5, "select_unit", select_unit,
-                     lambda obs: obs.ui_data.HasField("multi")),
-    Function.ui_func(6, "select_idle_worker", select_idle_worker,
-                     lambda obs: obs.player_common.idle_worker_count > 0),
-    Function.ui_func(7, "select_army", select_army,
-                     lambda obs: obs.player_common.army_count > 0),
-    Function.ui_func(8, "select_warp_gates", select_warp_gates,
-                     lambda obs: obs.player_common.warp_gate_count > 0),
-    Function.ui_func(9, "select_larva", select_larva,
-                     lambda obs: obs.player_common.larva_count > 0),
-    Function.ui_func(10, "unload", unload,
-                     lambda obs: obs.ui_data.HasField("cargo")),
-    Function.ui_func(11, "build_queue", build_queue,
-                     lambda obs: obs.ui_data.HasField("production")),
-    # Everything below here is generated with gen_actions.py
-    Function.ability(12, "Attack_screen", cmd_screen, 3674),
-    Function.ability(13, "Attack_minimap", cmd_minimap, 3674),
-    Function.ability(14, "Attack_Attack_screen", cmd_screen, 23, 3674),
-    Function.ability(18, "Attack_Redirect_screen", cmd_screen, 1682, 3674),
-    Function.ability(20, "Scan_Move_minimap", cmd_minimap, 19, 3674),
-    Function.ability(37, "Behavior_PulsarBeamOff_quick", cmd_quick, 2376),
-    Function.ability(38, "Behavior_PulsarBeamOn_quick", cmd_quick, 2375),
-    Function.ability(102, "Build_UltraliskCavern_screen", cmd_screen, 1159),
-    Function.ability(103, "BurrowDown_quick", cmd_quick, 3661),
-    Function.ability(116, "BurrowDown_Zergling_quick", cmd_quick, 1390, 3661),
-    Function.ability(139, "BurrowUp_Zergling_autocast", autocast, 1392, 3662),
-    Function.ability(140, "Cancel_quick", cmd_quick, 3659),
-    Function.ability(175, "Cancel_QueuePassiveCancelToSelection_quick", cmd_quick, 1833, 3671),
-    Function.ability(176, "Effect_Abduct_screen", cmd_screen, 2067),
-    Function.ability(273, "Harvest_Return_SCV_quick", cmd_quick, 296, 3667),
-    Function.ability(274, "HoldPosition_quick", cmd_quick, 3793),
-    Function.ability(450, "Research_ZerglingMetabolicBoost_quick", cmd_quick, 1253),
-    Function.ability(456, "Stop_Stop_quick", cmd_quick, 4, 3665),
-    Function.ability(510, "TrainWarp_Zealot_screen", cmd_screen, 1413),
-    Function.ability(511, "Unload_quick", cmd_quick, 3664),
+    Function.ability(1, "move", cmd_move, 1),
 ]
 # pylint: enable=line-too-long
 
@@ -449,20 +347,7 @@ _Functions = enum.IntEnum(  # pylint: disable=invalid-name
     "_Functions", {f.name: f.id for f in _FUNCTIONS})
 _FUNCTIONS = [f._replace(id=_Functions(f.id)) for f in _FUNCTIONS]
 FUNCTIONS = Functions(_FUNCTIONS)
-
-# Some indexes to support features.py and action conversion.
-ABILITY_IDS = collections.defaultdict(set)  # {ability_id: {funcs}}
-for _func in FUNCTIONS:
-  if _func.ability_id >= 0:
-    ABILITY_IDS[_func.ability_id].add(_func)
-ABILITY_IDS = {k: frozenset(v) for k, v in six.iteritems(ABILITY_IDS)}
 FUNCTIONS_AVAILABLE = {f.id: f for f in FUNCTIONS if f.avail_fn}
-
-
-# pylint: disable=line-too-long
-_RAW_FUNCTIONS = [
-
-
 
 class FunctionCall(collections.namedtuple(
     "FunctionCall", ["function", "arguments"])):
@@ -489,7 +374,7 @@ class FunctionCall(collections.namedtuple(
       KeyError: if the enum name doesn't exist.
       ValueError: if the enum id doesn't exist.
     """
-    func = RAW_FUNCTIONS[function] if raw else FUNCTIONS[function]
+    func = FUNCTIONS[function]
     args = []
     for arg, arg_type in zip(arguments, func.args):
       arg = numpy_to_python(arg)
