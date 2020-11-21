@@ -163,26 +163,6 @@ def _define_position_based_enum(name, options):
       name, {opt_name: i for i, (opt_name, _) in enumerate(options)})
 
 
-SELECT_POINT_ACT_OPTIONS = [
-    ("select", sc_spatial.ActionSpatialUnitSelectionPoint.Select),
-]
-SelectPointAct = _define_position_based_enum(  # pylint: disable=invalid-name
-    "SelectPointAct", SELECT_POINT_ACT_OPTIONS)
-
-SELECT_ADD_OPTIONS = [
-    ("select", False),
-    ("add", True),
-]
-SelectAdd = _define_position_based_enum(  # pylint: disable=invalid-name
-    "SelectAdd", SELECT_ADD_OPTIONS)
-
-SELECT_UNIT_ACT_OPTIONS = [
-    ("select", sc_ui.ActionMultiPanel.SingleSelect),
-    ("deselect", sc_ui.ActionMultiPanel.DeselectUnit),
-]
-SelectUnitAct = _define_position_based_enum(  # pylint: disable=invalid-name
-    "SelectUnitAct", SELECT_UNIT_ACT_OPTIONS)
-
 WALKING_DIRECTION_OPTIONS = [
     ("north", 0)
     ("northeast", 1)
@@ -198,8 +178,9 @@ WalkAct = _define_position_based_enum(  # pylint: disable=invalid-name
 
 # The list of known types.
 TYPES = Arguments.types(
-    walking_direction=ArgumentType.scalar(9),
+    walking_direction=ArgumentType.enum(WALKING_DIRECTION_OPTIONS, WalkAct),
     walking_state=ArgumentType.scalar(1)
+    # entity_id=ArgumentType.enum()
     # minimap=ArgumentType.point(),
     # queued=ArgumentType.enum(QUEUED_OPTIONS, Queued),
     # select_point_act=ArgumentType.enum(
@@ -216,11 +197,29 @@ RAW_TYPES = RawArguments.types(
     # target_unit_tag=ArgumentType.unit_tags(1, 512),
 )
 
+def no_op():
+  pass
+
+def cmd_move():
+  pass
+
+def cmd_build():
+  pass
+
+def cmd_rotate():
+  pass
+
+def cmd_mine():
+  pass
+
+def cmd_shoot():
+  pass
+
 
 # Which argument types do each function need?
 FUNCTION_TYPES = {
     no_op: [],
-    move: [TYPES.direction],
+    cmd_move: [TYPES.direction],
     # select_point: [TYPES.select_point_act, TYPES.screen],
     # cmd_screen: [TYPES.queued, TYPES.screen],
     # cmd_minimap: [TYPES.queued, TYPES.minimap],
@@ -241,10 +240,8 @@ class Function(collections.namedtuple(
       "id",
       "name",
       "general_id",
-      "function_type",
       "args",
       "avail_fn",
-      "raw"
       ])):
   """Represents a function action.
   Attributes:
@@ -325,14 +322,6 @@ class Functions(object):
     return self._func_list == other._func_list  # pylint: disable=protected-access
 
 
-def no_op():
-  pass
-
-def cmd_move():
-  pass
-
-# The semantic meaning of these actions can mainly be found by searching:
-# http://liquipedia.net/starcraft2/ or http://starcraft.wikia.com/ .
 # pylint: disable=line-too-long
 _FUNCTIONS = [
     Function.ui_func(0, "no_op", no_op),
@@ -340,12 +329,8 @@ _FUNCTIONS = [
 ]
 # pylint: enable=line-too-long
 
-
 # Create an IntEnum of the function names/ids so that printing the id will
 # show something useful.
-_Functions = enum.IntEnum(  # pylint: disable=invalid-name
-    "_Functions", {f.name: f.id for f in _FUNCTIONS})
-_FUNCTIONS = [f._replace(id=_Functions(f.id)) for f in _FUNCTIONS]
 FUNCTIONS = Functions(_FUNCTIONS)
 FUNCTIONS_AVAILABLE = {f.id: f for f in FUNCTIONS if f.avail_fn}
 

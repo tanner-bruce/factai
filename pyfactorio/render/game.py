@@ -354,7 +354,7 @@ class RendererHuman(object):
 
         pygame.init()
 
-        main_screen_px = di.camera_world_space_dims
+        main_screen_px = di.camera_world_space_dims * 0.5
         self._feature_screen_px = di.camera_world_space_dims
 
         feature_cols = 0
@@ -569,8 +569,6 @@ class RendererHuman(object):
         obs = True
         while obs:  # Send something falsy through the queue to shut down.
             obs = self._obs_queue.get()
-            if obs is None:
-                return
             if obs:
                 # for alert in obs.observation.alerts:
                 # self._alerts[sc_pb.Alert.Name(alert)] = time.time()
@@ -604,6 +602,9 @@ class RendererHuman(object):
         """Render a frame given an observation."""
         start_time = time.time()
         self._obs = obs
+
+        if obs is None:
+            return
 
         for surf in self._surfaces:
             surf.draw(surf)
