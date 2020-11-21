@@ -5,6 +5,7 @@ from pyfactorio.env.controller import DisplayInfo
 
 sw = stopwatch.sw
 
+
 class Surface(object):
     """A surface to display on screen."""
 
@@ -110,3 +111,12 @@ class Surface(object):
         rect = text_surf.get_rect()
         rect.center = self.world_to_surf.fwd_pt(world_loc)
         self.surf.blit(text_surf, rect)
+
+
+def circle_mask(shape, pt, radius):
+    # ogrid is confusing but seems to be the best way to generate a circle mask.
+    # http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html
+    # http://stackoverflow.com/questions/8647024/how-to-apply-a-disc-shaped-mask-to-a-numpy-array
+    y, x = np.ogrid[-pt.y : shape.y - pt.y, -pt.x : shape.x - pt.x]
+    # <= is important as radius will often come in as 0 due to rounding.
+    return x ** 2 + y ** 2 <= radius ** 2

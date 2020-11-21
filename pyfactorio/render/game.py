@@ -96,15 +96,6 @@ class ActionCmd(enum.Enum):
     QUIT = 3
 
 
-def circle_mask(shape, pt, radius):
-    # ogrid is confusing but seems to be the best way to generate a circle mask.
-    # http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html
-    # http://stackoverflow.com/questions/8647024/how-to-apply-a-disc-shaped-mask-to-a-numpy-array
-    y, x = np.ogrid[-pt.y : shape.y - pt.y, -pt.x : shape.x - pt.x]
-    # <= is important as radius will often come in as 0 due to rounding.
-    return x ** 2 + y ** 2 <= radius ** 2
-
-
 class RendererHuman(object):
     """Render factorio feature maps"""
 
@@ -201,7 +192,7 @@ class RendererHuman(object):
     def close(self):
         if self._obs_queue:
             self._obs_queue.put(None)
-            self._render_thread.join()
+            self._render_thread.join(timeout=1)
             self._obs_queue = None
             self._render_thread = None
 
@@ -464,6 +455,9 @@ class RendererHuman(object):
         obs = True
         while obs:  # Send something falsy through the queue to shut down.
             obs = self._obs_queue.get()
+            if obs is None:
+                self._obs_queue.task_done()
+                return 
             if obs:
                 # for alert in obs.observation.alerts:
                 # self._alerts[sc_pb.Alert.Name(alert)] = time.time()

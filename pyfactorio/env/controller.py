@@ -1,30 +1,35 @@
 from collections import namedtuple
-import logging
-from pyfactorio.render import point
+from threading import Thread
 import subprocess
 import time
-from threading import Thread
 
-from pyfactorio.util import get_desktop_size
 from pyfactorio.api.rcon import rcon
+from pyfactorio.render import point
 
-DisplayInfo = namedtuple("DisplayInfo", [
-    "screen_dims",
-    # "screen_scale",
-    "camera_tl_player_offset_dims",
-    "camera_world_space_dims"
-    ])
+DisplayInfo = namedtuple(
+    "DisplayInfo",
+    [
+        "screen_dims",
+        "camera_tl_player_offset_dims",
+        "camera_world_space_dims",
+    ],
+)
+
 
 class FactorioController:
-    def __init__(self, addr="127.0.0.1", password="pass", port=9889):
-        self._addr = addr
-        self._password = password
-        self._port = port
-        self._ready = False
-        self._rcon = None
+    def __init__(self, addr: str="127.0.0.1", password: str="pass", port: int=9889):
+        self._addr: str = addr
+        self._password: str = password
+        self._port: int = port
+        self._ready: bool = False
+        self._rcon: rcon = None
         self._proc = None
+        self._thread: Thread = None
+        self._quitting: bool = False
 
     def quit(self) -> None:
+        self._quitting = True
+        self._thread.join(timeout=5)
         if self._proc is not None:
             self._proc.terminate()
             self._proc = None
@@ -36,23 +41,23 @@ class FactorioController:
         self._proc.terminate()
         self.start_game()
 
-    def zoom(self, zoom: float=0.7) -> DisplayInfo:
+    def zoom(self, zoom: float = 0.7) -> DisplayInfo:
         return self._do_zoom(zoom)
 
     def _do_zoom(self, zoom: float) -> DisplayInfo:
         display_info = self._rcon.command("/zoom %f" % zoom)
         self._zoom = zoom
         print(display_info)
-        self._display_size = point.Point(display_info[0][b'width'], display_info[0][b'height']) # type: ignore
-        self._camera_dim_offset = point.Point(display_info[1][0], display_info[1][1]) # type: ignore
-        self._camera_dims = self._camera_dim_offset * 2 # type: ignore
+        self._display_size = point.Point(display_info[0][b"width"], display_info[0][b"height"])  # type: ignore
+        self._camera_dim_offset = point.Point(display_info[1][0], display_info[1][1])  # type: ignore
+        self._camera_dims = self._camera_dim_offset * 2  # type: ignore
         # self._screen_scale = self._tiles_dims / self._camera_dims
         self._di = DisplayInfo(
             screen_dims=self._camera_dims,
-            # screen_scale=self._screen_scale, 
+            # screen_scale=self._screen_scale,
             camera_tl_player_offset_dims=self._camera_dim_offset,
-            camera_world_space_dims=self._camera_dim_offset*2
-            )
+            camera_world_space_dims=self._camera_dim_offset * 2,
+        )
         return self._di
 
     def display_info(self) -> DisplayInfo:
@@ -61,13 +66,13 @@ class FactorioController:
     def act(self, actions):
         return ()
 
-    def step(self, step=1):
+    def step(self, step: int=1) -> str:
         return self._rcon.command("/step %d" % step)
 
-    def observe(self, count=1):
+    def observe(self, count: int=1) -> str:
         return self._rcon.command("/observe %d" % count)
 
-    def start_game(self):
+    def start_game(self) -> None:
         self._thread = Thread(target=self._start_process)
         self._thread.start()
 
@@ -84,7 +89,7 @@ class FactorioController:
         self.zoom()
         print("zoom set")
 
-    def _start_process(self):
+    def _start_process(self) -> None:
         args = [
             "E:/SteamLibrary/steamapps/common/Factorio/bin/x64/Factorio.exe",
             "--rcon-bind=127.0.0.1:9889",
@@ -96,7 +101,7 @@ class FactorioController:
             args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd="run"
         )
         self._proc = process
-        while True:
+        while self._quitting is False:
             out = ""
             output = self._proc.stdout.readline()
             if output == b"" and process.poll() is not None:
