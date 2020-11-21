@@ -42,7 +42,7 @@ function send()
 end
 
 script.on_init(on_init)
-script.on_nth_tick(2, send)
+script.on_nth_tick(3, send)
 commands.add_command("enqueue", "enqueue", commands.enqueue)
 commands.add_command("observe", "observe", commands.observe)
 commands.add_command("zoom", "zoom", commands.zoom)

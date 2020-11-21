@@ -98,9 +98,9 @@ function commands.observe(parameter)
     local rs = p.repair_state
     local cs = p.cursor_stack
     local cg = p.cursor_ghost
+    local ic = p.in_combat
 
     -- local cq = p.crafting_queue
-    local ic = p.in_combat
     -- local cmp = p.character_mining_progress
 
     -- local ent = p.character
@@ -121,38 +121,39 @@ function commands.observe(parameter)
 
     --
 
+    local insert = table.insert
+
     local player_feature_vec = {}
-    table.insert(player_feature_vec, parameter.tick)
-    table.insert(player_feature_vec, pos.x)
-    table.insert(player_feature_vec, pos.y)
-    table.insert(player_feature_vec, ws.walking_state or false)
-    table.insert(player_feature_vec, ws.direction)
-    table.insert(player_feature_vec, ic)
-    table.insert(player_feature_vec, ss)
+    insert(player_feature_vec, parameter.tick)
+    insert(player_feature_vec, pos.x)
+    insert(player_feature_vec, pos.y)
+    insert(player_feature_vec, ws.walking_state or false)
+    insert(player_feature_vec, ws.direction)
+    insert(player_feature_vec, ic)
+    insert(player_feature_vec, ss)
 
     entities = {}
     ec = global["entcache"]
     for i, ent in ipairs(find_visible_entities(p)) do
-        ect = ec[ent.name]
-        if ect then
-            ectx = ect[ent.position.x] or {}
+        if ec[ent.name] then
+            ectx = global["entcache"][ent.position.x] or {}
             ectx[ent.position.y] = {ent.health, ent.get_health_ratio()}
-            ect[ent.position.x] = ectx
+            global["entcache"][ent.name][ent.position.x] = ectx
         else
             el = entities[ent.name] or {}
-            table.insert(el, {
-                ent.position.x, ent.position.y,
-                ent.health, ent.get_health_ratio()
-            })
+            elx = el[ent.position.x] or {}
+            elx[ent.position.y] = {ent.health, ent.get_health_ratio()}
+            el[ent.position.x] = elx
             entities[ent.name] = el
         end
     end
 
-    if global["send"] then
-        for ent, ents in ipairs(ec) do
-            entities[ent] = ents
+    if global["send"] == true then
+        for ent, ents in pairs(global["entcache"]) do
+            if next(ents) ~= nil then
+                entities[ent] = ents
+            end
         end
-        clear()
     end
 
     out = {
@@ -161,6 +162,8 @@ function commands.observe(parameter)
     }
 
     rcon.print(m.pack(out))
+    global["send"] = false
+    clear()
 end
 
 function commands.enqueue(parameter)
