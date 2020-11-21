@@ -1,6 +1,39 @@
 local m = require("./msgpack")
 local util = require("./util")
 
+function clear()
+    global["entcache"] = {}
+    global["entcache"]["send"] = false
+    global["entcache"]["coal"] = {}
+    global["entcache"]["copper-ore"] = {}
+    global["entcache"]["crude-oil"] = {}
+    global["entcache"]["enemy-base"] = {}
+    global["entcache"]["iron-ore"] = {}
+    global["entcache"]["stone"] = {}
+    global["entcache"]["trees"] = {}
+    global["entcache"]["uranium-ore"] = {}
+    global["entcache"]["dead-dry-hairy-tree"] = {}
+    global["entcache"]["dead-grey-trunk"] = {}
+    global["entcache"]["dead-tree-desert"] = {}
+    global["entcache"]["dry-hairy-tree"] = {}
+    global["entcache"]["dry-tree"] = {}
+    global["entcache"]["tree-01"] = {}
+    global["entcache"]["tree-02"] = {}
+    global["entcache"]["tree-02-red"] = {}
+    global["entcache"]["tree-03"] = {}
+    global["entcache"]["tree-04"] = {}
+    global["entcache"]["tree-05"] = {}
+    global["entcache"]["tree-06"] = {}
+    global["entcache"]["tree-06-brown"] = {}
+    global["entcache"]["tree-07"] = {}
+    global["entcache"]["tree-08"] = {}
+    global["entcache"]["tree-08-brown"] = {}
+    global["entcache"]["tree-08-red"] = {}
+    global["entcache"]["tree-09"] = {}
+    global["entcache"]["tree-09-brown"] = {}
+    global["entcache"]["tree-09-red"] = {}
+end
+
 function find_nearby_entities(e, force)
     local radius = 110
     local pos = e.position;
@@ -98,13 +131,28 @@ function commands.observe(parameter)
     table.insert(player_feature_vec, ss)
 
     entities = {}
+    ec = global["entcache"]
     for i, ent in ipairs(find_visible_entities(p)) do
-        el = entities[ent.name] or {}
-        table.insert(el, {
-            ent.position.x, ent.position.y,
-            ent.health, ent.get_health_ratio()
-        })
-        entities[ent.name] = el
+        ect = ec[ent.name]
+        if ect then
+            ectx = ect[ent.position.x] or {}
+            ectx[ent.position.y] = {ent.health, ent.get_health_ratio()}
+            ect[ent.position.x] = ectx
+        else
+            el = entities[ent.name] or {}
+            table.insert(el, {
+                ent.position.x, ent.position.y,
+                ent.health, ent.get_health_ratio()
+            })
+            entities[ent.name] = el
+        end
+    end
+
+    if global["send"] then
+        for ent, ents in ipairs(ec) do
+            entities[ent] = ents
+        end
+        clear()
     end
 
     out = {
